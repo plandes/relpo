@@ -40,6 +40,8 @@ class TestBase(unittest.TestCase):
     def _assert_tags(self):
         tags = self._exec('git tag').strip()
         if len(tags.split('\n')) < 2:
+            self._exec('git config user.email "landes@mailc.net"')
+            self._exec('git config user.name "Paul Landes"')
             self._exec('git tag -am "unit test tag 1" v0.0.1')
             self._exec('git tag -am "unit test tag 2" v0.0.2')
 
