@@ -4,9 +4,10 @@
 ## Build
 #
 PROJ_TYPE=		python
+PROJ_MODULES =		python/doc
 
 # ignore relpo invocations used in 'pixi.mk'
-PY_RP_RELPO_BIN =	true
+PY_RP_RELPO_BIN ?=	true
 
 
 ## Project
@@ -16,11 +17,13 @@ PY_PYPROJECT_FILE =	$(MTARG)/pyproject.toml
 
 PY_DOMAIN_NAME :=	zensols
 PY_PROJECT_NAME :=	relpo
+PY_GITHUB_USER :=	$(shell git remote -v | grep github | head -1 | \
+				sed -E 's/.*:([^/]+).*/\1/')
 PY_VERSION :=		$(shell grep -E '^version' pyproject.toml | \
 				sed 's/.*\"\(.*\)\"$$/\1/')
 # invoke arguments
 PY_HELP_ARGS ?=		invoke '--help'
-PY_RUN_ARGS ?=		--config $(PY_RP_PROJ_FILES) --tmp $(MTARG)
+PY_RUN_ARGS ?=		--config $(PY_RP_PROJ_FILES_) --tmp $(MTARG)
 
 
 ## Includes
@@ -61,6 +64,15 @@ rpbumptag:
 .PHONY:			rpcheck
 rpcheck:
 			@$(PY_PX_BIN) run invoke 'check $(PY_RUN_ARGS)'
+
+# deploy local documentation
+.PHONY:			rpdocdeploy
+rpdocdeploy:
+			make PY_RP_RELPO_BIN=relpo pydocdeploy
+
+.PHONY:			rpgitdocdeploy
+rpgitdocdeploy:
+			make PY_RP_RELPO_BIN=relpo pygitdocdeploy
 
 .PHONY:			rpdochtml
 rpdochtml:
