@@ -8,11 +8,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 
-## [0.0.2] - 2025-05-02
+## [0.0.2] - 2025-05-03
 Release candidate
 
 
-## [0.0.1] - 2025-04-20
+## [0.0.1] - 2025-05-02
 ### Added
 - Initial version.
 
