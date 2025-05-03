@@ -31,7 +31,11 @@ class TestBase(unittest.TestCase):
         self.maxDiff = sys.maxsize
 
     def _exec(self, cmd: str) -> str:
-        return sub.check_output(cmd, shell=True, text=True, stderr=sub.STDOUT)
+        proc: sub.CompletedProcess = sub.run(cmd, shell=True, capture_output=True)
+        out = proc.stdout.decode()
+        err = proc.stderr.decode()
+        self.assertEqual(0, proc.returncode, err)
+        return out
 
     def _assert_tags(self):
         tags = self._exec('git tag').strip()
