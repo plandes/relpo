@@ -2,12 +2,12 @@ from typing import Tuple
 from datetime import date
 import copy
 from pathlib import Path
-import unittest
 from zensols.relpo import Version, ChangeLogEntry, ChangeLog
 from zensols.relpo.project import Project
+from util import TestBase
 
 
-class TestVersion(unittest.TestCase):
+class TestVersion(TestBase):
     def test_cmp(self):
         vstr = Version()
         self.assertEqual('v0.0.1', str(vstr))
@@ -66,7 +66,7 @@ class TestVersion(unittest.TestCase):
         self.assertTrue(vers[1] == v2)
 
 
-class TestChangeLog(unittest.TestCase):
+class TestChangeLog(TestBase):
     def test_change(self):
         ch = ChangeLog(Path('test-resources/changelog-1.md'))
         entries: Tuple[ChangeLogEntry, ...] = tuple(ch.entries)
@@ -78,24 +78,37 @@ class TestChangeLog(unittest.TestCase):
         self.assertEqual('2025-04-10', str(entries[1].date))
 
 
-class TestProject(unittest.TestCase):
+class TestProject(TestBase):
     def setUp(self):
         self.project = Project(
             (Path('test-resources/relpo.yml'),), Path('target'))
 
-    def test_tag_text(self):
-        ver = self.project.repo.tags[-1].version
-        self.assertEqual(Version, type(ver))
-        self.assertTrue(ver.name.startswith('v0.0'))
 
-    def test_tag_order(self):
-        entries = self.project.repo.tags
-        first = entries[0]
-        last = entries[-1]
-        self.assertTrue(first.version < last.version)
-
+class TestProjectSerialize(TestProject):
     def test_repo_serialize(self):
         self.assertTrue(len(self.project.repo.asjson()) > 10)
 
     def test_serialize(self):
         self.assertTrue(len(self.project.asjson()) > 10)
+
+
+class TestProjectTag(TestProject):
+    def setUp(self):
+        super().setUp()
+        self._delete_tags()
+
+    def tearDown(self):
+        self._restore_tags()
+
+    def test_tag_text(self):
+        self._assert_tags()
+        ver = self.project.repo.tags[-1].version
+        self.assertEqual(Version, type(ver))
+        self.assertTrue(ver.name.startswith('v0.0'))
+
+    def test_tag_order(self):
+        self._assert_tags()
+        entries = self.project.repo.tags
+        first = entries[0]
+        last = entries[-1]
+        self.assertTrue(first.version < last.version)

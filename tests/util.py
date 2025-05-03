@@ -1,5 +1,6 @@
 import unittest
 import sys
+import subprocess as sub
 from unittest.case import _common_shorten_repr
 import difflib
 
@@ -25,6 +26,22 @@ def assertMultiLineEqual(self, first, second, msg=None):
 unittest.TestCase.assertMultiLineEqual = assertMultiLineEqual
 
 
-class TestMultiline(unittest.TestCase):
+class TestBase(unittest.TestCase):
     def setUp(self):
         self.maxDiff = sys.maxsize
+
+    def _exec(self, cmd: str) -> str:
+        return sub.check_output(cmd, shell=True, text=True, stderr=sub.STDOUT)
+
+    def _assert_tags(self):
+        tags = self._exec('git tag').strip()
+        if len(tags.split('\n')) < 2:
+            self._exec('git tag -am "unit test tag 1" v0.0.1')
+            self._exec('git tag -am "unit test tag 2" v0.0.2')
+
+    def _delete_tags(self):
+        self._exec('git tag | xargs git tag -d')
+
+    def _restore_tags(self):
+        self._delete_tags()
+        self._exec('git pull --tags')
