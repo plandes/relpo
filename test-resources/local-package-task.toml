@@ -1,0 +1,5 @@
+
+# package task builds the wheel and conda files
+[tool.pixi.tasks.package]
+cmd = "echo creating packaged distribution files"
+depends-on = [{ "task" = "build-conda" }, { "task" = "build-wheel" }]

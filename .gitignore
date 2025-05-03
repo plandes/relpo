@@ -1,0 +1,11 @@
+# python
+*.pyc
+
+# emacs
+*_flymake.py
+
+# zensols project
+/target
+
+# pixi environments
+.pixi

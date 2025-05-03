@@ -1,0 +1,55 @@
+# author full name and email
+author:
+  name: Paul Landes
+  email: email@example.com
+# GitHub user name
+github:
+  user: exghuser
+# 'project' section metadata
+project:
+  # company or organization name
+  domain: acme
+  # project name
+  name: anvil
+  # project documentation
+  short_description: A short description
+  long_description: >-
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+    tempor incididunt ut labore et dolore magna aliqua.
+  # keywords used in the package metadata
+  keywords:
+    - file
+    - utility
+  # Python version and dependencies
+  python:
+    # Python interpreter versions
+    version:
+      # constraint on install eligibility
+      required: '>=3.11,<3.13'
+      # last supported version of Python supported for the project
+      previous: '3.11.12'
+      # Python version supported for current development
+      current: '3.12.10'
+      # version of Python used to build/link specific to the host
+      package_host: '3.11.6'
+    # pypi dependencies added to 'project'
+    dependencies:
+      # show/tables
+      - tabulate
+      # cli
+      - plac
+# template files used to generate the 'pyproject.toml' file
+build:
+  project_dir: .
+  template_dir: test-resources/pyproject-template
+  change_log_file_name: CHANGELOG.md
+  pyproject_template_files:
+    - test-resources/local-invoke-task.toml
+    - test-resources/local-package-task.toml
+# Sphinx API documentation
+doc:
+  api_config:
+    intersphinx_mapping:
+      util:
+        modules: [zensols.util, zensols.persist, zensols.config, zensols.cli, zensols.multi]
+        url: '{RP_DOC_IM_URL}/{package}/'

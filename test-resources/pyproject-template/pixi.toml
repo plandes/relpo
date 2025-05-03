@@ -1,0 +1,15 @@
+### Pixi
+#
+# virtual environments (each under '.pixi/envs') for specific tasks
+[tool.pixi.environments]
+default = { features = ["pyverprev"], solve-group = "default" }
+testprev = { features = ["pyverprev", "testprev"] }
+testcur = { features = ["pyvercur", "testcur"] }
+build-pypi = { features = ["pyverprev", "build-pypi"], solve-group = "default" }
+
+# pixi directly supports depending on PyPI packages, the PyPA calls a
+# distributed package a 'distribution'
+[tool.pixi.feature.testprev.pypi-dependencies]
+{{ project_name }} = { path = ".", editable = true }
+[tool.pixi.feature.testcur.pypi-dependencies]
+{{ project_name }} = { path = ".", editable = true }

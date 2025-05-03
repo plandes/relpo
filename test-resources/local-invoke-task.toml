@@ -1,0 +1,6 @@
+
+# command-line program invocation
+[tool.pixi.tasks.invoke]
+args = [{ "arg" = "args", "default" = "" }]
+env = { CLASS = "zensols.relpo.cli", PYTHONPATH = "src" }
+cmd = "\npython -c \"from $CLASS import main;print('_'*80);main('{{args}}'.split())\""

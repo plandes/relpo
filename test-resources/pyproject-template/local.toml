@@ -1,0 +1,4 @@
+# tasks that use the 'default' environment
+[tool.pixi.tasks]
+# print command line help
+help = "python {{ config.project.name }} --help"

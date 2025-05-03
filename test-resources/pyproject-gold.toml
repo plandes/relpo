@@ -1,0 +1,70 @@
+#@meta {author: "Paul Landes"}
+#@meta {desc: "Python build configuration", date: "{{ date.strftime('%Y-%m-%d') }}"}
+
+
+### Project
+#
+[project]
+name = "acme_anvil"
+version = "{{ version }}"
+authors = [{name = "Paul Landes", email = "email@example.com"}]
+description = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "tabulate",
+  "plac",
+]
+scripts = { anvil = "acme.anvil.cli:main" }
+license = "MIT"
+license-files = ["LICENSE.md"]
+keywords = ["file", "utility"]
+
+[project.urls]
+Homepage = "https://github.com/exghuser/anvil"
+Documentation = "https://exghuser.github.io/anvil"
+Repository = "https://github.com/exghuser/anvil.git"
+Issues = "https://github.com/exghuser/anvil/issues"
+Changelog = "https://github.com/exghuser/anvil/blob/master/CHANGELOG.md"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+### Hatchling
+#
+[tool.hatch.build.targets.wheel]
+packages = ["src/acme", "resources"]
+artifacts = ["*.conf", "*.json", "*.yml"]
+
+[tool.hatch.build.targets.wheel.sources]
+resources = "acme/anvil/resources"
+
+
+### Pixi
+#
+# virtual environments (each under '.pixi/envs') for specific tasks
+[tool.pixi.environments]
+default = { features = ["pyverprev"], solve-group = "default" }
+testprev = { features = ["pyverprev", "testprev"] }
+testcur = { features = ["pyvercur", "testcur"] }
+build-pypi = { features = ["pyverprev", "build-pypi"], solve-group = "default" }
+
+# pixi directly supports depending on PyPI packages, the PyPA calls a
+# distributed package a 'distribution'
+[tool.pixi.feature.testprev.pypi-dependencies]
+acme_anvil = { path = ".", editable = true }
+[tool.pixi.feature.testcur.pypi-dependencies]
+acme_anvil = { path = ".", editable = true }
+
+# command-line program invocation
+[tool.pixi.tasks.invoke]
+args = [{ "arg" = "args", "default" = "" }]
+env = { CLASS = "zensols.relpo.cli", PYTHONPATH = "src" }
+cmd = "\npython -c \"from $CLASS import main;print('_'*80);main('{{args}}'.split())\""
+
+# package task builds the wheel and conda files
+[tool.pixi.tasks.package]
+cmd = "echo creating packaged distribution files"
+depends-on = [{ "task" = "build-conda" }, { "task" = "build-wheel" }]
