@@ -1,4 +1,4 @@
-# Release and Git repo automation
+# Release and Git Repository Automation
 
 [![PyPI][pypi-badge]][pypi-link]
 [![Python 3.11][python311-badge]][python311-link]

@@ -82,6 +82,7 @@ class Application(object):
         :param message: the message (comment-like) of the tag
 
         """
+        # TODO: recreate the pyproject.toml file on mk, rm, bump tags
         project: Project = self._get_project()
         tags: Tuple[Tag, ...] = project.repo.tags
         changes: Tuple[ChangeLogEntry, ...] = project.change_log.entries
