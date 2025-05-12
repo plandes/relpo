@@ -4,7 +4,7 @@
 ## Build
 #
 PROJ_TYPE=		python
-PROJ_MODULES =		python/doc
+PROJ_MODULES =		python/doc python/deploy
 
 # ignore relpo invocations used in 'pixi.mk'
 PY_RP_RELPO_BIN ?=	true
