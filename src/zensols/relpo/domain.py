@@ -19,12 +19,14 @@ logger = logging.getLogger(__name__)
 
 
 class ProjectRepoError(Exception):
+    """Raised for project repository related errors."""
     pass
 
 
-class Dumper(yaml.Dumper):
+class _Dumper(yaml.Dumper):
+    """This YAML formatting class increases indentation."""
     def increase_indent(self, flow=False, indentless=False):
-        return super(Dumper, self).increase_indent(flow, False)
+        return super(yaml.Dumper, self).increase_indent(flow, False)
 
 
 @dataclass
@@ -48,7 +50,7 @@ class Flattenable(object):
         yaml.dump(
             self.asdict(),
             stream=writer,
-            Dumper=Dumper,
+            Dumper=_Dumper,
             default_flow_style=False)
         return writer.getvalue()
 

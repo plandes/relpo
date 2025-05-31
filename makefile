@@ -39,16 +39,16 @@ rpbuildconfig:
 			@$(PY_PX_BIN) run invoke 'config $(PY_RUN_ARGS)'
 
 # create the project metadata JSON file
-$(PY_META_FILE):	$(PY_RP_PROJ_FILE)
+.PHONY:			rpmetafilejson
+rpmetafilejson:
 			@$(PY_PX_BIN) run invoke \
-				'meta $(PY_RUN_ARGS) -o $(PY_META_FILE) -v'
-.PHONY:			rpmetafile
-rpmetafile:		$(PY_META_FILE)
-			@cat $(PY_META_FILE)
+				'meta $(PY_RUN_ARGS) -v'
 
-.PHONY:			rppyprojfile
-rppyprojfile:		$(PY_PYPROJECT_FILE)
-			@head -50 $(PY_PYPROJECT_FILE)
+# create the project metadata YAML file
+.PHONY:			rpmetafileyaml
+rpmetafileyaml:
+			@$(PY_PX_BIN) run invoke \
+				'meta $(PY_RUN_ARGS) -v -f yaml'
 
 # make a tag using the version of the last commit
 .PHONY:			rpmktag
@@ -81,9 +81,21 @@ rpdochtml:
 				'mkdoc $(PY_RUN_ARGS) -o $(MTARG)/doc/build'
 
 # integration tests
+.PHONY:			testmetafileyaml
+testmetafileyaml:
+			$(eval cor=94)
+			@make rpmetafileyaml 2>/dev/null | \
+			  wc -l | xargs -i{} bash -c \
+			  "if [ '{}' != '$(cor)' ] ; then echo {} != $(cor) ; exit 1 ; fi"
+			@echo "test YAML metadata...ok"
+
+.PHONY:			testmetafilejson
+testmetafilejson:
+			@make rpmetafilejson --no-print-directory 2>/dev/null | \
+				tail -n +2 | \
+				jq 'del(.date, .path, .change_log, .repo)' | \
+				diff - test-resources/meta-gold.json
+			@echo "test JSON metadata...ok"
+
 .PHONY:			testall
-testall:
-			@rm -rf $(PY_META_FILE) $(PY_PYPROJECT_FILE)
-			@make test $(PY_META_FILE)
-			@rm -fr $(MTARG)
-			@make $(PY_PYPROJECT_FILE)
+testall:		test testmetafileyaml testmetafilejson

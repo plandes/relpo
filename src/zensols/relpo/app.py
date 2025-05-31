@@ -53,6 +53,8 @@ class Application(object):
 
         :param out: the output file or dump to standard out if not provided
 
+        :param format: the output format
+
         """
         format = 'json' if format is None else format
         project: Project = self._get_project()

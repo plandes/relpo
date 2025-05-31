@@ -1,0 +1,92 @@
+{
+  "last_release": {
+    "valid": false
+  },
+  "issue": "there is no tag for the latest commit",
+  "config": {
+    "author": {
+      "name": "Paul Landes",
+      "email": "email@example.com"
+    },
+    "github": {
+      "user": "exghuser"
+    },
+    "project": {
+      "domain": "acme",
+      "name": "anvil",
+      "short_description": "A short description",
+      "long_description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      "keywords": [
+        "file",
+        "utility"
+      ],
+      "python": {
+        "version": {
+          "required": ">=3.11,<3.13",
+          "previous": "3.11.12",
+          "current": "3.12.10",
+          "package_host": "3.11.6"
+        },
+        "dependencies": [
+          "tabulate",
+          "plac"
+        ]
+      }
+    },
+    "build": {
+      "project_dir": ".",
+      "template_dir": "test-resources/pyproject-template",
+      "change_log_file_name": "CHANGELOG.md",
+      "pyproject_template_files": [
+        "test-resources/local-invoke-task.toml",
+        "test-resources/local-package-task.toml"
+      ],
+      "table_appends": {
+        "tool.pixi.environments.build-env": {
+          "features": [
+            "pyverprev",
+            "build-env"
+          ],
+          "solve-group": "default"
+        }
+      }
+    },
+    "doc": {
+      "api_config": {
+        "intersphinx_mapping": {
+          "util": {
+            "modules": [
+              "zensols.util",
+              "zensols.persist",
+              "zensols.config",
+              "zensols.cli",
+              "zensols.multi"
+            ],
+            "url": "{RP_DOC_IM_URL}/{package}/"
+          },
+          "python-v3": {
+            "modules": [
+              "python"
+            ],
+            "url": "https://docs.python.org/3"
+          }
+        },
+        "source_dirs": [
+          "src"
+        ]
+      },
+      "stage_dir": "doc/stage",
+      "config_template_dir": "zenbuild/src/template/python-doc/config",
+      "apidoc_template_dir": "zenbuild/src/template/python-doc/apidoc",
+      "apidoc_output_dir": "doc/stage/api",
+      "copy": {
+        "README.md": "index.md",
+        "CHANGELOG.md": null,
+        "LICENSE.md": null,
+        "CONTRIBUTING.md": null,
+        "tests": null,
+        "doc": null
+      }
+    }
+  }
+}
