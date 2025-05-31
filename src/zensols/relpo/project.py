@@ -14,6 +14,9 @@ import pickle
 from io import TextIOBase, StringIO
 import yaml
 from jinja2 import Template, Environment, FileSystemLoader, BaseLoader
+import tomlkit as toml
+from tomlkit.toml_document import TOMLDocument
+from tomlkit.items import Table
 from . import (
     ProjectRepoError, Flattenable,
     Version, Commit, Tag, ChangeLogEntry, Release, ChangeLog
@@ -41,6 +44,12 @@ class ProjectConfig(Flattenable):
     pyproject_template_files: Tuple[Path, ...] = field()
     """Additional template files used to render the ``pyproject.toml`` file."""
 
+    table_appends: Dict[str, Any] = field()
+    """Table name/value TOML appends to add to the ``pyproject.toml`` file.
+    These entries have the TOML path as keys and the contents of an inline table
+    to add as values.
+
+    """
     change_log_file_name: str = field()
     """The name of the change log file."""
 
@@ -72,7 +81,9 @@ class ProjectConfig(Flattenable):
                 build, 'change_log_file_name', 'CHANGELOG.md'),
             pyproject_template_files=tuple(cls._get(
                 build, 'pyproject_template_files',
-                'pyproject.toml project template files', [])))
+                'pyproject.toml project template files', [])),
+            table_appends=cls._get(
+                build, 'table_appends', 'table name/value TOML appends', {}))
         return config
 
     @property
@@ -233,6 +244,24 @@ class Project(Flattenable):
         params = self._get_template_params() if params is None else params
         return template.render(params)
 
+    def _append_tables(self, content: str, appends: Dict[str, Any]) -> str:
+        proj: TOMLDocument = toml.parse(content)
+        pl: List[str]
+        src: Dict[str, Any]
+        for pl, src in map(lambda i: (i[0].split('.'), i[1]), appends.items()):
+            path: List[str] = pl[:-1]
+            to_add_name: str = pl[-1]
+            to_add = toml.inline_table()
+            child: Table = proj
+            name: str
+            for name in path:
+                child = child[name]
+            for k, v in src.items():
+                to_add.add(k, v)
+            child.append(to_add_name, to_add)
+        content = toml.dumps(proj)
+        return content
+
     @property
     def pyproject(self) -> str:
         """The ``pyproject.toml`` rendered content as a string.
@@ -249,7 +278,11 @@ class Project(Flattenable):
         name: str
         for name in self.config.pyproject_template_files:
             self._render(local_env, params, self.config.proj_dir, name, sio)
-        return sio.getvalue().rstrip()
+        content: str = sio.getvalue()
+        if len(self.config.table_appends) > 0:
+            content = self._append_tables(content, self.config.table_appends)
+        content = content.rstrip()
+        return content
 
     @property
     def issue(self) -> str:

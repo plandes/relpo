@@ -53,6 +53,7 @@ build-pypi = { features = ["pyverprev", "build-pypi"], solve-group = "default" }
 
 # pixi directly supports depending on PyPI packages, the PyPA calls a
 # distributed package a 'distribution'
+build-env = {features = ["pyverprev", "build-env"], solve-group = "default"}
 [tool.pixi.feature.testprev.pypi-dependencies]
 acme_anvil = { path = ".", editable = true }
 [tool.pixi.feature.testcur.pypi-dependencies]

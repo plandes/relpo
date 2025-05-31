@@ -38,14 +38,24 @@ project:
       - tabulate
       # cli
       - plac
-# template files used to generate the 'pyproject.toml' file
+# configuration used to generate the 'pyproject.toml' file
 build:
+  # the root Git repo directory
   project_dir: .
+  # Jinja2 template files used to generate the 'pyproject.toml' file
   template_dir: test-resources/pyproject-template
+  # used for the latest version number
   change_log_file_name: CHANGELOG.md
+  # append the contents of each file to the end of the 'pyproject.toml' file
   pyproject_template_files:
     - test-resources/local-invoke-task.toml
     - test-resources/local-package-task.toml
+  # inline table to add to TOML tables
+  table_appends:
+    # create a new Pixi environment with name 'build-env'
+    tool.pixi.environments.build-env:
+      features: ['pyverprev', 'build-env']
+      solve-group: 'default'
 # Sphinx API documentation
 doc:
   api_config:
