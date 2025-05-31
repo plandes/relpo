@@ -86,18 +86,10 @@ rpdochtml:
 # project metadata yaml file test
 .PHONY:			testmetafileyaml
 testmetafileyaml:
-			$(eval cor=91)
-			$(eval testfile=$(MTARG)/metafile.yaml)
-			@rm -fr $(MTARG)
-			@mkdir -p $(dir $(testfile))
 			@make rpmetafileyaml --no-print-directory 2>/dev/null | \
-				tail -n +2 > $(testfile)
-			@cat $(testfile) | wc -l | xargs -i{} bash -c \
-			  "if [ '{}' != '$(cor)' ] ; then \
-				echo line count differs: {} != $(cor) ; \
-				cat $(testfile) ; \
-				exit 1 ; \
-			  fi"
+				tail -n +2 | \
+				yq 'del(.date, .path, .change_log, .repo, .last_release)' | \
+				diff - test-resources/meta-gold.yaml
 			@echo "test YAML metadata...ok"
 
 # project metadata json file test
@@ -114,4 +106,4 @@ testmetafilejson:
 testint:		testmetafileyaml testmetafilejson
 
 .PHONY:			testall
-testall:		testint
+testall:		test testint

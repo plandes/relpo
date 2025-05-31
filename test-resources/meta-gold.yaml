@@ -1,0 +1,65 @@
+config:
+  author:
+    email: email@example.com
+    name: Paul Landes
+  build:
+    change_log_file_name: CHANGELOG.md
+    project_dir: .
+    pyproject_template_files:
+      - test-resources/local-invoke-task.toml
+      - test-resources/local-package-task.toml
+    table_appends:
+      tool.pixi.environments.build-env:
+        features:
+          - pyverprev
+          - build-env
+        solve-group: default
+    template_dir: test-resources/pyproject-template
+  doc:
+    api_config:
+      intersphinx_mapping:
+        python-v3:
+          modules:
+            - python
+          url: https://docs.python.org/3
+        util:
+          modules:
+            - zensols.util
+            - zensols.persist
+            - zensols.config
+            - zensols.cli
+            - zensols.multi
+          url: '{RP_DOC_IM_URL}/{package}/'
+      source_dirs:
+        - src
+    apidoc_output_dir: doc/stage/api
+    apidoc_template_dir: zenbuild/src/template/python-doc/apidoc
+    config_template_dir: zenbuild/src/template/python-doc/config
+    copy:
+      CHANGELOG.md: null
+      CONTRIBUTING.md: null
+      LICENSE.md: null
+      README.md: index.md
+      doc: null
+      tests: null
+    stage_dir: doc/stage
+  github:
+    user: exghuser
+  project:
+    domain: acme
+    keywords:
+      - file
+      - utility
+    long_description: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+    name: anvil
+    python:
+      dependencies:
+        - tabulate
+        - plac
+      version:
+        current: 3.12.10
+        package_host: 3.11.6
+        previous: 3.11.12
+        required: '>=3.11,<3.13'
+    short_description: A short description
+issue: there is no tag for the latest commit
