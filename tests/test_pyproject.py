@@ -16,7 +16,7 @@ class TestPyProject(TestBase):
             date=datetime.now(),
             version=version)
 
-    def _test_render(self):
+    def test_render(self):
         project = Project((Path('test-resources/relpo.yml'),), Path('targt'))
         should: str = self._render(Path('test-resources/pyproject-gold.toml'))
         content: str = project.pyproject
