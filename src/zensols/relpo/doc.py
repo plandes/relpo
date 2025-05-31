@@ -188,6 +188,7 @@ class Documentor(object):
         self._execute(cmd)
 
     def generate(self):
+        """Create the site and API documentation."""
         for path in (self._stage_dir, self.output_dir):
             logger.info(f'removing existing doc source tree: {path}')
             if path.is_dir():

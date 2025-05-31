@@ -282,6 +282,7 @@ class Project(Flattenable):
         return reason
 
     def create_doc(self, output_dir: Path):
+        """Create the site and API documentation."""
         sd = Documentor(
             config=self.config.site_doc_config,
             template_params=self._get_template_params(),
