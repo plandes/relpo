@@ -80,15 +80,27 @@ rpdochtml:
 				$(PY_PX_BIN) run invoke \
 				'mkdoc $(PY_RUN_ARGS) -o $(MTARG)/doc/build'
 
-# integration tests
+
+## Test
+#
+# project metadata yaml file test
 .PHONY:			testmetafileyaml
 testmetafileyaml:
-			$(eval cor=94)
-			@make rpmetafileyaml 2>/dev/null | \
-			  wc -l | xargs -i{} bash -c \
-			  "if [ '{}' != '$(cor)' ] ; then echo {} != $(cor) ; exit 1 ; fi"
+			$(eval cor=91)
+			$(eval testfile=$(MTARG)/metafile.yaml)
+			@rm -fr $(MTARG)
+			@mkdir -p $(dir $(testfile))
+			@make rpmetafileyaml --no-print-directory 2>/dev/null | \
+				tail -n +2 > $(testfile)
+			@cat $(testfile) | wc -l | xargs -i{} bash -c \
+			  "if [ '{}' != '$(cor)' ] ; then \
+				echo line count differs: {} != $(cor) ; \
+				cat $(testfile) ; \
+				exit 1 ; \
+			  fi"
 			@echo "test YAML metadata...ok"
 
+# project metadata json file test
 .PHONY:			testmetafilejson
 testmetafilejson:
 			@make rpmetafilejson --no-print-directory 2>/dev/null | \
@@ -97,5 +109,9 @@ testmetafilejson:
 				diff - test-resources/meta-gold.json
 			@echo "test JSON metadata...ok"
 
+# integration tests
+.PHONY:			testint
+testint:		testmetafileyaml testmetafilejson
+
 .PHONY:			testall
-testall:		test testmetafileyaml testmetafilejson
+testall:		testint
