@@ -13,7 +13,7 @@ PY_RP_RELPO_BIN ?=	true
 ## Build overrides
 #
 # pyproject.toml
-PY_RP_PROJ_FILES =	test-resources/relpo.yml,test-resources/doc.yml
+PY_RP_PROJ_FILES =	test-resources/relpo.yml,test-resources/doc.yml,test-resources/envdist.yml
 PY_PYPROJECT_FILE =	$(MTARG)/pyproject.toml
 
 # build subs
@@ -91,16 +91,23 @@ rpdocdeploy:
 rpgitdocdeploy:
 			make PY_RP_RELPO_BIN=relpo pygitdocdeploy
 
-# # create API documentation
+# create API documentation
 $(RP_DOC_BUILD_DIR):
 			@RP_DOC_IM_URL="https://plandes.github.io" \
 				$(PY_PX_BIN) run invoke \
 				'mkdoc $(PY_RUN_ARGS) -o $(RP_DOC_BUILD_DIR)'
 
-# # create API doc and visualize
+# create API doc and visualize
 .PHONY:			rpdochtmlshow
 rpdochtmlshow:		$(RP_DOC_BUILD_DIR)
 			$(RENDER_BIN) $(RP_DOC_BUILD_DIR)/html/index.html
+
+
+# create the environment distribution file
+.PHONY:			rpenvdist
+rpenvdist:
+			@$(PY_PX_BIN) run invoke \
+				'mkenvdist $(PY_RUN_ARGS) -o $(MTARG)/dist.tar'
 
 
 ## Test targets

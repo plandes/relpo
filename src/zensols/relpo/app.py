@@ -136,3 +136,12 @@ class Application(object):
         """
         project: Project = self._get_project(True)
         project.create_doc(out)
+
+    def mkenvdist(self, out: Path = None):
+        """Create the environment distribution file.
+
+        :param out: the output distribution file
+
+        """
+        project: Project = self._get_project(True)
+        project.create_env_dist(out)

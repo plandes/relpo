@@ -23,6 +23,7 @@ from . import (
 )
 from .repo import ProjectRepo
 from .doc import DocConfig, Documentor
+from .envdist import EnvironmentDistConfig, EnvironmentDistBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +33,6 @@ class ProjectConfig(Config):
     """The :class:`.Project` configuration.
 
     """
-    data: Dict[str, Any] = field()
-    """The raw nested dict data as parsed from the config file."""
-
     proj_dir: Path = field()
     """The root Git repo directory."""
 
@@ -80,9 +78,17 @@ class ProjectConfig(Config):
 
     @property
     def site_doc_config(self) -> DocConfig:
+        """The Sphinix documentation configuraiton."""
         config: Dict[str, Any] = self._get(
             self.data, 'doc', 'documentation configuration')
         return DocConfig.instance(config)
+
+    @property
+    def envdist_config(self) -> EnvironmentDistConfig:
+        """The environment distribution configuraiton."""
+        config: Dict[str, Any] = self._get(
+            self.data, 'envdist', 'environment distribution configuration')
+        return EnvironmentDistConfig.instance(config)
 
     def asdict(self):
         return self.data
@@ -313,6 +319,15 @@ class Project(Flattenable):
             template_params=self._get_template_params(),
             temporary_dir=self.temporary_dir,
             output_dir=output_dir)
+        sd.generate()
+
+    def create_env_dist(self, output_file: Path):
+        """Create the environment distribution file."""
+        sd = EnvironmentDistBuilder(
+            config=self.config.envdist_config,
+            template_params=self._get_template_params(),
+            temporary_dir=self.temporary_dir,
+            output_file=output_file)
         sd.generate()
 
 

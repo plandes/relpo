@@ -1,0 +1,14 @@
+#@meta {author: "Paul Landes"}
+#@meta {desc: "zenbuild python environment distribution", date: "2025-05-31"}
+
+envdist:
+  # where to write the temporary library files
+  stage_dir: envdist/stage
+  # the directory to cache conda and PyPi library files
+  cache_dir: ~/.cache/relpo
+  # the Pixi lock file (almost always 'pixi.lock')
+  pixi_lock_file: test-resources/pixi-test.lock
+  # the environment to export (i.e. 'default', 'testcur')
+  environment: default
+  # the platforms to export, or all if not provided (i.e. 'linux-64')
+  platforms: [linux-64]

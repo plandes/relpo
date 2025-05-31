@@ -12,7 +12,7 @@ import logging
 import shutil
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, Template
-from . import ProjectRepoError, Flattenable, Config
+from . import Config
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +22,6 @@ class DocConfig(Config):
     """Configuration for API doc generation.
 
     """
-    data: Dict[str, Any] = field()
-    """The parsed document config."""
-
     stage_dir: Path = field()
     """Where temporary files are created used by Sphinx."""
 
@@ -48,14 +45,6 @@ class DocConfig(Config):
     copy: Dict[str, Any] = field()
     """Files to copy to the Sphinx source directory."""
 
-    @staticmethod
-    def _get(data: Dict[str, Any], key: str,
-             desc: str, default: Any = None) -> Any:
-        val = data.get(key, default)
-        if val is None:
-            raise ProjectRepoError(f"Missing {desc} key '{key}' in <<{data}>>")
-        return val
-
     @classmethod
     def instance(cls: Type, data: Dict[str, Any]) -> DocConfig:
         return DocConfig(
@@ -75,9 +64,6 @@ class DocConfig(Config):
                 data, 'api_config', 'sphinx API config values'),
             copy=cls._get(
                 data, 'copy', 'verbatim file patterns to copy'))
-
-    def asdict(self):
-        return self.data
 
 
 @dataclass
@@ -190,8 +176,8 @@ class Documentor(object):
     def generate(self):
         """Create the site and API documentation."""
         for path in (self._stage_dir, self.output_dir):
-            logger.info(f'removing existing doc source tree: {path}')
             if path.is_dir():
+                logger.info(f'removing existing doc source tree: {path}')
                 shutil.rmtree(path)
         self._stage_dir.mkdir(parents=True, exist_ok=True)
         self._generate_apidoc_config()

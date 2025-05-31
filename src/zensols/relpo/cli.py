@@ -12,7 +12,7 @@ import plac
 from zensols.relpo.app import Application
 
 logger = logging.getLogger(__name__)
-_OUT_DEFAULT: str = '<dir>'
+_OUT_DEFAULT: str = '<path>'
 _FORMAT_DEFAULT: str = '<json|yaml>'
 _MESSAGE_DEFAULT: str = '<comment>'
 
@@ -22,7 +22,7 @@ _MESSAGE_DEFAULT: str = '<comment>'
     verbose=('verbose', 'flag', 'v'),
     config=('comma separated project configuration files', 'option', 'c', str),
     tmp=('temporary directory', 'option', 't', Path),
-    out=('output file', 'option', 'o', str),
+    out=('output path', 'option', 'o', str),
     format=('output format', 'option', 'f', str),
     message=('message comment used for new tags', 'option', 'm', str))
 def invoke(action: str, verbose: bool = False,
@@ -43,7 +43,8 @@ actions:
   bumptag               move the latest tag to the last commit
   template              render standard in with: `date`, `project`, `config`
   check                 check for any issues with creating a release
-  mkdoc                 create site documentation
+  mkdoc [-o]            create site documentation
+  mkenvdist [-o]        create the environment distribution
 
     """
     prog: str = Path(sys.argv[0]).name
@@ -52,13 +53,10 @@ actions:
     if verbose:
         level = logging.DEBUG
     else:
-        level = {
-            'check': logging.INFO,
-            'mktag': logging.INFO,
-            'rmtag': logging.INFO,
-            'bumptag': logging.INFO,
-            'doc': logging.INFO,
-        }.get(action, logging.WARNING)
+        info_actions = 'check mktag rmtag bumptag doc mkdoc mkenvdist'
+        level: int = logging.WARNING
+        if action in set(info_actions.split()):
+            level = logging.INFO
     if level == logging.DEBUG:
         fmt = '[%(levelname)s] %(module)s: %(message)s'
     else:

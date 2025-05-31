@@ -87,6 +87,15 @@
         "tests": null,
         "doc": null
       }
+    },
+    "envdist": {
+      "stage_dir": "envdist/stage",
+      "cache_dir": "~/.cache/relpo",
+      "pixi_lock_file": "test-resources/pixi-test.lock",
+      "environment": "default",
+      "platforms": [
+        "linux-64"
+      ]
     }
   }
 }

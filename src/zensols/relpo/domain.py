@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from abc import ABCMeta, abstractmethod
 import dataclasses
 import logging
+from collections import OrderedDict
 import re
 import json
 import yaml
@@ -22,6 +23,21 @@ logger = logging.getLogger(__name__)
 class ProjectRepoError(Exception):
     """Raised for project repository related errors."""
     pass
+
+
+def represent_ordereddict(dumper, data):
+    value = []
+
+    for item_key, item_value in data.items():
+        node_key = dumper.represent_data(item_key)
+        node_value = dumper.represent_data(item_value)
+
+        value.append((node_key, node_value))
+
+    return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
+
+
+yaml.add_representer(OrderedDict, represent_ordereddict)
 
 
 class _Dumper(yaml.Dumper):
@@ -46,14 +62,17 @@ class Flattenable(object):
         json.dump(self.asdict(), writer, **kwargs)
         return writer.getvalue()
 
-    def asyaml(self) -> str:
+    def _asyaml(self, data: Dict[str, Any]) -> str:
         writer = StringIO()
         yaml.dump(
-            self.asdict(),
+            data,
             stream=writer,
             Dumper=_Dumper,
             default_flow_style=False)
         return writer.getvalue()
+
+    def asyaml(self) -> str:
+        return self._asyaml(self.asdict())
 
 
 @dataclass
@@ -61,6 +80,9 @@ class Config(Flattenable, metaclass=ABCMeta):
     """A configuration container for sections of the ``relpo.yml`` file.
 
     """
+    data: Dict[str, Any] = field()
+    """The parsed document config."""
+
     @staticmethod
     def _get(data: Dict[str, Any], key: str,
              desc: str, default: Any = None) -> Any:
@@ -71,12 +93,18 @@ class Config(Flattenable, metaclass=ABCMeta):
         return val
 
     @classmethod
+    def _get_path(cls: Type, data: Dict[str, Any], key: str,
+                  desc: str, default: Any = None) -> Path:
+        val: str = cls._get(data, key, desc, default)
+        return Path(val).expanduser().absolute()
+
+    @classmethod
     @abstractmethod
     def instance(cls: Type, data: Dict[str, Any]) -> Config:
         """Create an instance of this class."""
         pass
 
-    def asdict(self):
+    def asdict(self) -> Dict[str, Any]:
         return self.data
 
 
