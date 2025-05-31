@@ -10,20 +10,30 @@ PROJ_MODULES =		python/doc python/deploy
 PY_RP_RELPO_BIN ?=	true
 
 
-## Project
+## Build overrides
 #
+# pyproject.toml
 PY_RP_PROJ_FILES =	test-resources/relpo.yml,test-resources/doc.yml
 PY_PYPROJECT_FILE =	$(MTARG)/pyproject.toml
 
+# build subs
 PY_DOMAIN_NAME :=	zensols
 PY_PROJECT_NAME :=	relpo
 PY_GITHUB_USER :=	$(shell git remote -v | grep github | head -1 | \
 				sed -E 's/.*:([^/]+).*/\1/')
 PY_VERSION :=		$(shell grep -E '^version' pyproject.toml | \
 				sed 's/.*\"\(.*\)\"$$/\1/')
+
+
+## Project
+#
 # invoke arguments
 PY_HELP_ARGS ?=		invoke '--help'
 PY_RUN_ARGS ?=		--config $(PY_RP_PROJ_FILES_) --tmp $(MTARG)
+
+# doc
+RP_DOC_BUILD_DIR ?=	$(MTARG)/rpdoc/build
+
 
 
 ## Includes
@@ -31,7 +41,7 @@ PY_RUN_ARGS ?=		--config $(PY_RP_PROJ_FILES_) --tmp $(MTARG)
 include ./zenbuild/main.mk
 
 
-## Targets
+## Build targets
 #
 # synthetized relpo.yml
 .PHONY:			rpbuildconfig
@@ -50,6 +60,9 @@ rpmetafileyaml:
 			@$(PY_PX_BIN) run invoke \
 				'meta $(PY_RUN_ARGS) -v -f yaml'
 
+
+## Git targets
+#
 # make a tag using the version of the last commit
 .PHONY:			rpmktag
 rpmktag:
@@ -65,23 +78,32 @@ rpbumptag:
 rpcheck:
 			@$(PY_PX_BIN) run invoke 'check $(PY_RUN_ARGS)'
 
+
+## Deploy targets
+#
 # deploy local documentation
 .PHONY:			rpdocdeploy
 rpdocdeploy:
 			make PY_RP_RELPO_BIN=relpo pydocdeploy
 
+# deploy git documentation
 .PHONY:			rpgitdocdeploy
 rpgitdocdeploy:
 			make PY_RP_RELPO_BIN=relpo pygitdocdeploy
 
-.PHONY:			rpdochtml
-rpdochtml:
+# # create API documentation
+$(RP_DOC_BUILD_DIR):
 			@RP_DOC_IM_URL="https://plandes.github.io" \
 				$(PY_PX_BIN) run invoke \
-				'mkdoc $(PY_RUN_ARGS) -o $(MTARG)/doc/build'
+				'mkdoc $(PY_RUN_ARGS) -o $(RP_DOC_BUILD_DIR)'
+
+# # create API doc and visualize
+.PHONY:			rpdochtmlshow
+rpdochtmlshow:		$(RP_DOC_BUILD_DIR)
+			$(RENDER_BIN) $(RP_DOC_BUILD_DIR)/html/index.html
 
 
-## Test
+## Test targets
 #
 # project metadata yaml file test
 .PHONY:			testmetafileyaml
