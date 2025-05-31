@@ -107,7 +107,7 @@ rpdochtmlshow:		$(RP_DOC_BUILD_DIR)
 .PHONY:			rpenvdist
 rpenvdist:
 			@$(PY_PX_BIN) run invoke \
-				'mkenvdist $(PY_RUN_ARGS) -o $(MTARG)/dist.tar'
+				'mkenvdist $(PY_RUN_ARGS) -o $(MTARG)/dist.tar -v'
 
 
 ## Test targets

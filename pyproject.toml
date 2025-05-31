@@ -38,6 +38,7 @@ dependencies = [
   "twine~=6.1.0",
   # cli
   "plac~=1.4.5",
+  "tqdm",
 ]
 scripts = { relpo = "zensols.relpo.cli:main" }
 license = "MIT"

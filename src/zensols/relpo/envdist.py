@@ -7,8 +7,11 @@ from typing import Tuple, List, Dict, Set, Any, Optional, Type, ClassVar
 from dataclasses import dataclass, field
 import logging
 import re
-import shutil
 from pathlib import Path
+import shutil
+import requests
+from requests import Response
+from tqdm import tqdm
 import yaml
 from . import ProjectRepoError, Flattenable, Config
 
@@ -67,10 +70,16 @@ class Dependency(Flattenable):
     source: str = field()
     """The URL of the resource."""
 
-    def _get_url_parts(self) -> Optional[Tuple[str, str, str]]:
+    local_file: Path = field(default=None)
+    """The downloaded and cached file on the local file system.
+
+    :see: :obj:`file`
+
+    """
+    def _get_url_parts(self) -> Tuple[str, str, str]:
         if not hasattr(self, '_url_parts'):
             m: re.Match = self._URL_REGEX.match(self.source)
-            self._url_parts: Tuple[str, ...] = None
+            self._url_parts: Tuple[str, ...] = (None, None, None)
             if m is not None:
                 self._url_parts = m.groups()
         return self._url_parts
@@ -81,39 +90,48 @@ class Dependency(Flattenable):
         to be confused with a cached file downloaded to the local file system.
 
         """
-        return self._get_url_parts() is None
+        return self._get_url_parts()[1] is None
+
+    @property
+    def source_file(self) -> str:
+        """The file name porition of the url, which is the file name."""
+        return self._get_url_parts()[2]
 
     @property
     def is_direct(self) -> bool:
         """Whether this is a Pip direct URL (i.e. ``<name> @ <url>``)."""
-        url: Optional[Tuple[str, str, str]] = self._get_url_parts()
-        if url is not None:
-            return url[0] is not None
+        return self._get_url_parts()[0]
 
     @property
     def url(self) -> Optional[str]:
         """The URL portion of the source (if it is a URL)."""
-        url: Optional[Tuple[str, str, str]] = self._get_url_parts()
-        if url is not None:
+        url: Tuple[str, str, str] = self._get_url_parts()
+        if url[1] is not None:
             return f'{url[1]}/{url[2]}'
-
-    @property
-    def file(self) -> Optional[Path]:
-        """The local file dependency path if :obj:`is_file` is ``True``."""
-        if self.is_file:
-            return Path(self.source)
 
     def _get_name_version(self) -> Tuple[str, str]:
         if not hasattr(self, '_name_version'):
             self._name_version: Tuple[str, ...] = (None, None)
-            url: Optional[Tuple[str, str, str]] = self._get_url_parts()
-            if url is not None:
-                m: re.Match = self._NAME_VER_REGEX.match(url[2])
+            fname: str = self.source_file
+            if fname is not None:
+                m: re.Match = self._NAME_VER_REGEX.match(fname)
                 if m is None:
-                    m = self._NAME_VER_FIRST_REGEX.match(url[2])
+                    m = self._NAME_VER_FIRST_REGEX.match(fname)
                 if m is not None:
                     self._name_version = m.groups()
         return self._name_version
+
+    @property
+    def file(self) -> Optional[Path]:
+        """The local file dependency path if :obj:`is_file` is ``True``.  These
+        are usually added to the repository and not to be confused with the
+        cached / downloaded file.
+
+        :see: :obj:`local_file`
+
+        """
+        if self.is_file:
+            return Path(self.source)
 
     @property
     def name(self) -> str:
@@ -133,6 +151,7 @@ class Dependency(Flattenable):
             'version': self.version}
         dct.update(super().asdict())
         dct.pop('source')
+        dct['local_file'] = str(dct['local_file'])
         return dct
 
     def __str__(self) -> str:
@@ -185,7 +204,7 @@ class Environment(Flattenable):
     name: str = field()
     """The name of the Pixi enviornment (i.e. ``default``)."""
 
-    platforms: List[Platform] = field()
+    platforms: Dict[str, Platform] = field()
     """The Pixi platforms (i.e. ``linux-64``)."""
 
     def add_env(self, env: Dict[str, Any], platform: str):
@@ -193,14 +212,14 @@ class Environment(Flattenable):
         env['name'] = self.name
         plat.add_env(env)
 
-    def env_str(self, platform: str):
+    def env_str(self, platform: str) -> str:
         from collections import OrderedDict
         env: Dict[str, Any] = OrderedDict()
         self.add_env(env, platform)
         return self._asyaml(env)
 
     def __len__(self) -> int:
-        return sum(map(len, self.platforms))
+        return sum(map(len, self.platforms.values()))
 
     def __str__(self) -> str:
         return self.name
@@ -238,6 +257,8 @@ class EnvironmentDistBuilder(object):
     def __post_init__(self):
         self._stage_dir = self.temporary_dir / self.config.stage_dir
         self._lock: Dict[str, Any] = None
+        self._env: Environment = None
+        self._pbar: tqdm = None
 
     def _assert_valid(self, lock: Dict[str, Any]):
         """Sanity check of the data parsed from the ``pixi.lock`` file."""
@@ -259,41 +280,88 @@ class EnvironmentDistBuilder(object):
         return self._lock
 
     def _get_environment(self) -> Environment:
-        envs: Dict[str, Any] = self.lock['environments']
-        env: Dict[str, Any] = envs.get(self.config.environment)
-        pkgs: Dict[str, Any] = env['packages']
-        plats_avail: Set[str] = set(pkgs.keys())
-        plats_conf: Set[str] = self.config.platforms
-        plat_ids: Set[str] = plats_conf if len(plats_conf) > 0 else plats_avail
-        plats_unavail: Set[str] = (plat_ids - plats_avail)
-        plats: List[Platform] = []
-        if len(plats_unavail) > 0:
-            plat_str: str = ', '.join(plats_unavail)
-            raise ProjectRepoError(
-                f'Exported platforms requested but unavailable: {plat_str}')
-        plat_id: str
-        for plat_id in plat_ids:
-            deps: List[Dependency] = []
-            plat: Dict[str, Any]
-            for plat in pkgs[plat_id]:
-                assert len(plat) == 1
-                dep_type, url = next(iter(plat.items()))
-                if dep_type != 'conda' and dep_type != 'pypi':
-                    raise ProjectRepoError(
-                        f'Unknown dependency type: {dep_type}')
-                deps.append(Dependency(dep_type[0] == 'c', url))
-            plats.append(Platform(plat_id, deps))
-        return Environment(self.config.environment, {p.name: p for p in plats})
+        if self._env is None:
+            envs: Dict[str, Any] = self.lock['environments']
+            env: Dict[str, Any] = envs.get(self.config.environment)
+            pkgs: Dict[str, Any] = env['packages']
+            plats_avail: Set[str] = set(pkgs.keys())
+            plats_conf: Set[str] = self.config.platforms
+            plat_ids: Set[str] = plats_conf \
+                if len(plats_conf) > 0 else plats_avail
+            plats_unavail: Set[str] = (plat_ids - plats_avail)
+            plats: List[Platform] = []
+            if len(plats_unavail) > 0:
+                plat_str: str = ', '.join(plats_unavail)
+                raise ProjectRepoError(
+                    f'Exported platforms requested but unavailable: {plat_str}')
+            plat_id: str
+            for plat_id in plat_ids:
+                deps: List[Dependency] = []
+                plat: Dict[str, Any]
+                for plat in pkgs[plat_id]:
+                    assert len(plat) == 1
+                    dep_type, url = next(iter(plat.items()))
+                    if dep_type != 'conda' and dep_type != 'pypi':
+                        raise ProjectRepoError(
+                            f'Unknown dependency type: {dep_type}')
+                    deps.append(Dependency(dep_type[0] == 'c', url))
+                plats.append(Platform(plat_id, deps))
+            self._env = Environment(
+                name=self.config.environment,
+                platforms={p.name: p for p in plats})
+        return self._env
+
+    def _fetch_or_download(self, dep: Dependency, base_dir: Path):
+        if dep.is_file:
+            assert dep.file is not None
+            dep.local_file = dep.file
+        else:
+            url: str = dep.url
+            local_file: Path = base_dir / dep.source_file
+            if not local_file.exists():
+                logger.debug(f'{url} -> {local_file}')
+                res: Response = requests.get(url)
+                if res.status_code == 200:
+                    with open(local_file, 'wb') as f:
+                        f.write(res.content)
+                else:
+                    raise ProjectRepoError(f'Dependency download fail: {dep}')
+            dep.local_file = local_file
+
+    def _download_dependencies(self):
+        cache_dir: Path = self.config.cache_dir
+        env: Environment = self._get_environment()
+        if not cache_dir:
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f'created directory: {cache_dir}')
+        plat: Platform
+        for plat in env.platforms.values():
+            plat_cache: Path = cache_dir / plat.name
+            plat_cache.mkdir(parents=True, exist_ok=True)
+            logger.info(f'creating {repr(plat)} with {len(plat)} dependencies')
+            logger.debug(f'patform cache dir: {plat_cache}')
+            self._pbar.set_description(f'dl {plat}')
+            dep: Dependency
+            for dep in plat.deps:
+                self._fetch_or_download(dep, plat_cache)
+                self._pbar.update()
+
+    def get_environment_file(self, platform_id: str) -> str:
+        env: Environment = self._get_environment()
+        return env.env_str(platform_id)
 
     def _create_tar(self):
+        stage_dir: Path = self._stage_dir
+        if stage_dir.is_dir():
+            logger.info(f'removing existing temporary files: {stage_dir}')
+            shutil.rmtree(stage_dir)
         logger.info(f'wrote: {self.output_file}')
 
-    def generate(self, progress: bool = True):
+    def generate(self, progress: bool = 0):
         """Create the environment distribution file."""
-        if self._stage_dir.is_dir():
-            logger.info(f'removing existing temporary files: {self._stage_dir}')
-            shutil.rmtree(self._stage_dir)
         env: Environment = self._get_environment()
-        logger.info(f'creating {repr(env)} with {len(env)} dependencies')
-        plat_name: str = next(iter(env.platforms.keys()))
-        #print(env.env_str(plat_name))
+        n_deps: int = len(env)
+        n_steps: int = n_deps * 4
+        self._pbar = tqdm(total=n_steps, ncols=80, disable=(not progress))
+        #logger.info(f'creating {repr(env)} with {n_deps} dependencies')
+        self._download_dependencies()
