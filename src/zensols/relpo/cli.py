@@ -53,8 +53,8 @@ actions:
     if verbose:
         level = logging.DEBUG
     else:
-        info_actions = 'check mktag rmtag bumptag doc mkdoc mkenvdist'
-        level: int = logging.WARNING
+        info_actions = 'check mktag rmtag bumptag doc mkdoc'
+        level = logging.WARNING
         if action in set(info_actions.split()):
             level = logging.INFO
     if level == logging.DEBUG:

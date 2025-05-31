@@ -49,7 +49,6 @@ config:
     pixi_lock_file: test-resources/pixi-test.lock
     platforms:
       - linux-64
-    stage_dir: target/envdist/stage
   github:
     user: exghuser
   project:
