@@ -5,6 +5,7 @@ from __future__ import annotations
 __author__ = 'Paul Landes'
 from typing import Dict, List, Tuple, Any, Optional, Type, ClassVar
 from dataclasses import dataclass, field
+from abc import ABCMeta, abstractmethod
 import dataclasses
 import logging
 import re
@@ -53,6 +54,30 @@ class Flattenable(object):
             Dumper=_Dumper,
             default_flow_style=False)
         return writer.getvalue()
+
+
+@dataclass
+class Config(Flattenable, metaclass=ABCMeta):
+    """A configuration container for sections of the ``relpo.yml`` file.
+
+    """
+    @staticmethod
+    def _get(data: Dict[str, Any], key: str,
+             desc: str, default: Any = None) -> Any:
+        """Get a value from the relpo config."""
+        val = data.get(key, default)
+        if val is None:
+            raise ProjectRepoError(f"Missing {desc} key '{key}' in <<{data}>>")
+        return val
+
+    @classmethod
+    @abstractmethod
+    def instance(cls: Type, data: Dict[str, Any]) -> Config:
+        """Create an instance of this class."""
+        pass
+
+    def asdict(self):
+        return self.data
 
 
 @dataclass(order=True, unsafe_hash=True)

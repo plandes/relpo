@@ -12,13 +12,13 @@ import logging
 import shutil
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, Template
-from . import ProjectRepoError, Flattenable
+from . import ProjectRepoError, Flattenable, Config
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class DocConfig(Flattenable):
+class DocConfig(Config):
     """Configuration for API doc generation.
 
     """

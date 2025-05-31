@@ -18,7 +18,7 @@ import tomlkit as toml
 from tomlkit.toml_document import TOMLDocument
 from tomlkit.items import Table
 from . import (
-    ProjectRepoError, Flattenable,
+    ProjectRepoError, Flattenable, Config,
     Version, Commit, Tag, ChangeLogEntry, Release, ChangeLog
 )
 from .repo import ProjectRepo
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class ProjectConfig(Flattenable):
+class ProjectConfig(Config):
     """The :class:`.Project` configuration.
 
     """
@@ -52,14 +52,6 @@ class ProjectConfig(Flattenable):
     """
     change_log_file_name: str = field()
     """The name of the change log file."""
-
-    @staticmethod
-    def _get(data: Dict[str, Any], key: str,
-             desc: str, default: Any = None) -> Any:
-        val = data.get(key, default)
-        if val is None:
-            raise ProjectRepoError(f"Missing {desc} key '{key}' in <<{data}>>")
-        return val
 
     @classmethod
     def instance(cls: Type, data: Dict[str, Any]) -> ProjectConfig:
