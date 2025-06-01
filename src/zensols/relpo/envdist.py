@@ -6,6 +6,7 @@ __author__ = 'Paul Landes'
 from typing import Tuple, List, Dict, Set, Any, Optional, Type, ClassVar
 from dataclasses import dataclass, field
 import logging
+import os
 import re
 from collections import OrderedDict
 from pathlib import Path
@@ -38,7 +39,7 @@ class EnvironmentDistConfig(Config):
     platforms: Set[str] = field()
     """The platforms to export (i.e. ``linux-64``)."""
 
-    injects: Tuple[Tuple[str, bool], ...] = field()
+    injects: Dict[str, Any] = field()
     """Local files to add to the distribution."""
 
     @classmethod
@@ -53,8 +54,8 @@ class EnvironmentDistConfig(Config):
                 data, 'environment', 'environment to export'),
             platforms=set(cls._get(
                 data, 'platforms', 'platforms to export', set())),
-            injects=set(cls._get(
-                data, 'injects', 'local file adds to distribution', ())))
+            injects=cls._get(
+                data, 'injects', 'local file adds to distribution', {}))
 
 
 @dataclass
@@ -65,10 +66,10 @@ class Dependency(Flattenable):
     _PYPI_ANY_REGEX: ClassVar[re.Pattern] = re.compile(
         r'.+(?:py3-none-any\.whl|tar\.(?:gz|bz2))$')
     _URL_REGEX: ClassVar[re.Pattern] = re.compile(r'^(direct\+)?(http.+)\/(.+)')
-    _NAME_VER_REGEX: ClassVar[re.Pattern] = re.compile(
-        r'^(^[A-Za-z0-9]+(?:[_-][a-z0-9]+)*)-(.+)((?:-py3|.tar).+)$')
-    _NAME_VER_FIRST_REGEX: ClassVar[re.Pattern] = re.compile(
-        r'^(^[A-Za-z0-9]+(?:[_-][a-z0-9]+)*)-(V?[0-9.]+(?:-?(?:stable|beta|alpha|RC[0-9]))?)(.+)$')
+    _NAME_VER_REGEXS: ClassVar[re.Pattern] = (
+        re.compile(r'^([A-Za-z0-9-.]+)-([^-]*)-(.*\.conda)$'),
+        re.compile(r'^([A-Za-z0-9.]+(?:[_-][a-z0-9]+)*)-(.+)((?:-py3|.tar).+)$'),
+        re.compile(r'^([A-Za-z0-9.]+(?:[_-][a-z0-9]+)*)-(V?[0-9.]+(?:-?(?:stable|beta|alpha|RC[0-9]))?)(.+)$'))
 
     is_conda: bool = field()
     """Whether the dependency is ``conda``  as apposed to ``pypi``."""
@@ -126,11 +127,12 @@ class Dependency(Flattenable):
             self._name_version: Tuple[str, ...] = (None, None)
             fname: str = self.source_file
             if fname is not None:
-                m: re.Match = self._NAME_VER_REGEX.match(fname)
-                if m is None:
-                    m = self._NAME_VER_FIRST_REGEX.match(fname)
-                if m is not None:
-                    self._name_version = m.groups()
+                pat: re.Pattern
+                for pat in self._NAME_VER_REGEXS:
+                    m: re.Match = pat.match(fname)
+                    if m is not None:
+                        self._name_version = m.groups()
+                        break
         return self._name_version
 
     @property
@@ -192,6 +194,8 @@ class Dependency(Flattenable):
 class Platform(Flattenable):
     """A parsed platform from the Pixi lock file."""
 
+    PYPI_NAME: ClassVar[str] = 'pypi'
+
     name: str = field()
     """The name of the platform (i.e. ``linux-64'``)."""
 
@@ -200,7 +204,7 @@ class Platform(Flattenable):
 
     def get_subdir(self, dependency: Dependency) -> str:
         if dependency.is_platform_independent:
-            return 'pypi'
+            return self.PYPI_NAME
         else:
             return self.name
 
@@ -265,6 +269,9 @@ class EnvironmentDistBuilder(Flattenable):
     output_file: Path = field()
     """Where to output the environment distribution file."""
 
+    progress: bool = field()
+    """Whether to display the progress bar."""
+
     def __post_init__(self):
         self._stage_dir = self.temporary_dir / 'envdist'
         self._lock: Dict[str, Any] = None
@@ -313,17 +320,23 @@ class EnvironmentDistBuilder(Flattenable):
                 plat_str: str = ', '.join(plats_unavail)
                 raise ProjectRepoError(
                     f'Exported platforms requested but unavailable: {plat_str}')
+            all_injects = self.config.injects.get('all', {})
             plat_name: str
             for plat_name in plat_names:
                 deps: List[Dependency] = []
-                plat: Dict[str, Any]
-                for plat in pkgs[plat_name]:
-                    assert len(plat) == 1
-                    dep_type, url = next(iter(plat.items()))
+                dep_specs: List[Dict[str, Any]] = list(pkgs[plat_name])
+                plat_injects = self.config.injects.get(plat_name, {})
+                dep_specs.extend(all_injects)
+                dep_specs.extend(plat_injects)
+                dep: Dict[str, Any]
+                for dep in dep_specs:
+                    assert len(dep) == 1
+                    dep_type, src = next(iter(dep.items()))
                     if dep_type != 'conda' and dep_type != 'pypi':
                         raise ProjectRepoError(
                             f'Unknown dependency type: {dep_type}')
-                    deps.append(Dependency(dep_type[0] == 'c', url))
+                    print('SRC', src)
+                    deps.append(Dependency(dep_type[0] == 'c', src))
                 plats.append(Platform(plat_name, deps))
             self._env = Environment(
                 name=self.config.environment,
@@ -375,22 +388,31 @@ class EnvironmentDistBuilder(Flattenable):
     def get_environment_file(self, platform_name: str) -> str:
         """The contents of the a platform's Conda ``environment.yml`` file"""
         def relative_path(dep: Dependency) -> str:
-            base_dir = Path(plat.get_subdir(dep))
-            return str(base_dir / dep.dist_name)
+            if dep.is_file:
+                return str(Path(plat.get_subdir(dep)) / dep.native_file.name)
+            return f'{dep.name}=={dep.version}'
+            # if dep.is_conda:
+            #     return dep.dist_name
+            # else:
+            #     base_dir = Path(plat.get_subdir(dep))
+            #     return str(base_dir / dep.dist_name)
 
         env: Environment = self._get_environment()
         root: Dict[str, Any] = OrderedDict()
         plat: Platform = env.platforms[platform_name]
         deps: List[Dict[str, Any]] = []
         pdeps: List[str] = []
-        root['name'] = '{{ config.project.name  }}-{{ platform.name }}'
+        root['name'] = self._render(
+            template_content='{{ config.project.name  }}-{{ platform.name }}',
+            params=self.template_params | dict(platform=plat))
         #deps.append('python == {{ config.project.python.version.current }}')
-        root['channels'] = ['nodefaults']
+        root['channels'] = ['./local-channel', 'nodefaults']
         dep: Dependency
         for dep in filter(lambda d: d.is_conda, plat.dependencies):
             deps.append(relative_path(dep))
-        deps.append('pip')
+        #deps.append('pip')
         deps.append({'pip': pdeps})
+        pdeps.extend(['--no-index', '--find-links ./pypi'])
         for dep in filter(lambda d: not d.is_conda, plat.dependencies):
             pdeps.append(relative_path(dep))
         root['dependencies'] = deps
@@ -415,20 +437,26 @@ class EnvironmentDistBuilder(Flattenable):
             logger.info(f'wrote: {env_file}')
             self._pbar.update()
             for dep in plat.dependencies:
-                targ: Path = stage_dir / plat.get_subdir(dep) / dep.dist_name
+                targ: Path = stage_dir
+                if dep.is_conda:
+                    targ = targ / 'local-channel' / plat.name
+                else:
+                    targ = targ / Platform.PYPI_NAME
+                targ = targ / dep.dist_name
                 targ.parent.mkdir(parents=True, exist_ok=True)
                 logger.debug(f'{dep.local_file} -> {targ}')
                 shutil.copyfile(dep.local_file, targ)
                 self._pbar.update()
+            cmd: str = f'( cd {stage_dir}/local-channel ; conda index . )'
+            os.system(cmd)
         logger.info(f'wrote: {self.output_file}')
 
     def generate(self):
         """Create the environment distribution file."""
-        progress: bool = logger.level >= logging.WARNING
         env: Environment = self._get_environment()
         n_deps: int = len(env)
         n_steps: int = (n_deps * 2) + 1
         logger.info(f'creating {repr(env)} with {n_deps} dependencies')
-        self._pbar = tqdm(total=n_steps, ncols=80, disable=(not progress))
+        self._pbar = tqdm(total=n_steps, ncols=80, disable=(not self.progress))
         self._download_dependencies()
         self._create_tar()

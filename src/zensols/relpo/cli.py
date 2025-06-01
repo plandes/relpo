@@ -12,6 +12,7 @@ import plac
 from zensols.relpo.app import Application
 
 logger = logging.getLogger(__name__)
+_LEVEL_DEFAULT: str = '[warn|info|debug]'
 _OUT_DEFAULT: str = '<path>'
 _FORMAT_DEFAULT: str = '<json|yaml>'
 _MESSAGE_DEFAULT: str = '<comment>'
@@ -19,13 +20,13 @@ _MESSAGE_DEFAULT: str = '<comment>'
 
 @plac.annotations(
     action=('task to execute (see actions)', 'positional', None, str),
-    verbose=('verbose', 'flag', 'v'),
+    level=('level', 'option', 'l', str),
     config=('comma separated project configuration files', 'option', 'c', str),
     tmp=('temporary directory', 'option', 't', Path),
     out=('output path', 'option', 'o', str),
     format=('output format', 'option', 'f', str),
     message=('message comment used for new tags', 'option', 'm', str))
-def invoke(action: str, verbose: bool = False,
+def invoke(action: str, level: str = _LEVEL_DEFAULT,
            config: str = 'relpo.yml',
            tmp: Path = Path('temp'),
            out: str = _OUT_DEFAULT,
@@ -49,20 +50,29 @@ actions:
     """
     prog: str = Path(sys.argv[0]).name
     fmt: str
-    level: int = logging.WARNING if out is None else logging.INFO
-    if verbose:
-        level = logging.DEBUG
-    else:
+    log_level: int = logging.WARNING
+    if level == _LEVEL_DEFAULT:
         info_actions = 'check mktag rmtag bumptag doc mkdoc'
-        level = logging.WARNING
         if action in set(info_actions.split()):
-            level = logging.INFO
-    if level == logging.DEBUG:
+            log_level = logging.INFO
+        else:
+            log_level = logging.WARNING
+    else:
+        log_level = {
+            'warn': logging.WARNING,
+            'info': logging.INFO,
+            'debug': logging.DEBUG,
+        }.get(level)
+        if log_level is None:
+            print(f'unknown log level: {log_level}', file=sys.stderr)
+            sys.exit(1)
+    if log_level == logging.DEBUG:
         fmt = '[%(levelname)s] %(module)s: %(message)s'
     else:
         fmt = f'{prog}: %(message)s'
     logging.basicConfig(format=fmt, level=logging.WARNING)
-    logging.getLogger('zensols.relpo').setLevel(level)
+    logging.getLogger('zensols.relpo').setLevel(log_level)
+    logging.getLogger('zensols.relpo.app').setLevel(log_level)
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug(f'invoking action: {action}')
     out: str = None if out == _OUT_DEFAULT else out
@@ -87,7 +97,7 @@ actions:
             sys.exit(ret)
     except Exception as e:
         print(f'{prog}: error: {e}', file=sys.stderr)
-        if verbose:
+        if log_level >= logging.DEBUG:
             import traceback
             traceback.print_exc()
         sys.exit(1)

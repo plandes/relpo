@@ -321,13 +321,14 @@ class Project(Flattenable):
             output_dir=output_dir)
         sd.generate()
 
-    def create_env_dist(self, output_file: Path):
+    def create_env_dist(self, output_file: Path, progress: bool):
         """Create the environment distribution file."""
         sd = EnvironmentDistBuilder(
             config=self.config.envdist_config,
             template_params=self._get_template_params(),
             temporary_dir=self.temporary_dir,
-            output_file=output_file)
+            output_file=output_file,
+            progress=progress)
         sd.generate()
 
 

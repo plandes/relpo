@@ -3,10 +3,16 @@
 
 envdist:
   # the directory to cache conda and PyPi library files (usually '~/.cache/relpo')
-  cache_dir: target/cache
+  cache_dir: target/envdist-cache
   # the Pixi lock file (usually 'pixi.lock')
   pixi_lock_file: pixi.lock
+  #pixi_lock_file: test-resources/pixi-test.lock
   # the environment to export (i.e. 'default', 'testcur')
-  environment: default
+  environment: build-pypi
   # the platforms to export, or all if not provided (i.e. 'linux-64')
   platforms: [osx-arm64]
+  #platforms: [linux-64]
+  # local files to add to the distribution
+  injects:
+    all:
+      - pypi: target/dist/zensols_relpo-0.0.4-py3-none-any.whl

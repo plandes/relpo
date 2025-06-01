@@ -52,13 +52,13 @@ rpbuildconfig:
 .PHONY:			rpmetafilejson
 rpmetafilejson:
 			@$(PY_PX_BIN) run invoke \
-				'meta $(PY_RUN_ARGS) -v'
+				'meta $(PY_RUN_ARGS)'
 
 # create the project metadata YAML file
 .PHONY:			rpmetafileyaml
 rpmetafileyaml:
 			@$(PY_PX_BIN) run invoke \
-				'meta $(PY_RUN_ARGS) -v -f yaml'
+				'meta $(PY_RUN_ARGS) -f yaml'
 
 
 ## Git targets
@@ -107,7 +107,7 @@ rpdochtmlshow:		$(RP_DOC_BUILD_DIR)
 .PHONY:			rpenvdist
 rpenvdist:
 			@$(PY_PX_BIN) run invoke \
-				'mkenvdist $(PY_RUN_ARGS) -o $(MTARG)/dist.tar'
+				'mkenvdist $(PY_RUN_ARGS) -o $(MTARG)/dist.tar -l info'
 
 
 ## Test targets

@@ -143,5 +143,6 @@ class Application(object):
         :param out: the output distribution file
 
         """
+        progress: bool = logger.level >= logging.WARNING
         project: Project = self._get_project(True)
-        project.create_env_dist(out)
+        project.create_env_dist(out, progress)
