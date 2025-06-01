@@ -105,7 +105,7 @@ rpdochtmlshow:		$(RP_DOC_BUILD_DIR)
 
 # create the environment distribution file
 .PHONY:			rpenvdist
-rpenvdist:
+rpenvdist:		pywheel
 			@$(PY_PX_BIN) run invoke \
 				'mkenvdist $(PY_RUN_ARGS) -o $(MTARG)/dist.tar -l info'
 

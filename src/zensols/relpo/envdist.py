@@ -335,7 +335,6 @@ class EnvironmentDistBuilder(Flattenable):
                     if dep_type != 'conda' and dep_type != 'pypi':
                         raise ProjectRepoError(
                             f'Unknown dependency type: {dep_type}')
-                    print('SRC', src)
                     deps.append(Dependency(dep_type[0] == 'c', src))
                 plats.append(Platform(plat_name, deps))
             self._env = Environment(
@@ -391,11 +390,6 @@ class EnvironmentDistBuilder(Flattenable):
             if dep.is_file:
                 return str(Path(plat.get_subdir(dep)) / dep.native_file.name)
             return f'{dep.name}=={dep.version}'
-            # if dep.is_conda:
-            #     return dep.dist_name
-            # else:
-            #     base_dir = Path(plat.get_subdir(dep))
-            #     return str(base_dir / dep.dist_name)
 
         env: Environment = self._get_environment()
         root: Dict[str, Any] = OrderedDict()
@@ -405,12 +399,10 @@ class EnvironmentDistBuilder(Flattenable):
         root['name'] = self._render(
             template_content='{{ config.project.name  }}-{{ platform.name }}',
             params=self.template_params | dict(platform=plat))
-        #deps.append('python == {{ config.project.python.version.current }}')
         root['channels'] = ['./local-channel', 'nodefaults']
         dep: Dependency
         for dep in filter(lambda d: d.is_conda, plat.dependencies):
             deps.append(relative_path(dep))
-        #deps.append('pip')
         deps.append({'pip': pdeps})
         pdeps.extend(['--no-index', '--find-links ./pypi'])
         for dep in filter(lambda d: not d.is_conda, plat.dependencies):
