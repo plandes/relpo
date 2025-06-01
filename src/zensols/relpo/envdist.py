@@ -3,7 +3,9 @@
 """
 from __future__ import annotations
 __author__ = 'Paul Landes'
-from typing import Tuple, List, Dict, Set, Any, Optional, Type, ClassVar
+from typing import (
+    Tuple, List, Dict, Set, Any, Optional, Type, Iterable, ClassVar
+)
 from dataclasses import dataclass, field
 import logging
 import os
@@ -18,6 +20,7 @@ from tqdm import tqdm
 from jinja2 import Template, BaseLoader
 from jinja2 import Environment as Jinja2Environment
 from . import ProjectRepoError, Flattenable, Config
+from .condameta import CondaPackage
 
 logger = logging.getLogger(__name__)
 
@@ -110,10 +113,9 @@ class Dependency(Flattenable):
         return self._get_url_parts()[0]
 
     @property
-    def is_platform_independent(self) -> bool:
+    def is_pypi_platform_independent(self) -> bool:
         """Whether this is platform independent (i.e. ``py3-none-any``)."""
-        return (not self.is_conda) and \
-            self._PYPI_ANY_REGEX.match(self.source) is not None
+        return self._PYPI_ANY_REGEX.match(self.source) is not None
 
     @property
     def url(self) -> Optional[str]:
@@ -165,6 +167,19 @@ class Dependency(Flattenable):
         else:
             return self.source_file
 
+    def get_conda_package(self) -> Optional[CondaPackage]:
+        """Get the conda package metadata.  This must be called after the
+        package is downloaded and :obj:`local_file` is set.
+
+        """
+        if self.is_conda:
+            if not hasattr(self, '_conda_package'):
+                if self.local_file is None:
+                    raise ProjectRepoError(
+                        f'Attempt conda package parse before download: {self}')
+                self._conda_package = CondaPackage(self.local_file)
+            return self._conda_package
+
     def asdict(self) -> Dict[str, Any]:
         dct: Dict[str, Any] = {
             'name': self.name,
@@ -172,7 +187,6 @@ class Dependency(Flattenable):
             'url': self.url,
             'is_file': self.is_file,
             'is_direct': self.is_direct,
-            'is_platform_independent': self.is_platform_independent,
             'native_file': str(self.native_file)}
         dct.update(super().asdict())
         dct.pop('source')
@@ -194,19 +208,11 @@ class Dependency(Flattenable):
 class Platform(Flattenable):
     """A parsed platform from the Pixi lock file."""
 
-    PYPI_NAME: ClassVar[str] = 'pypi'
-
     name: str = field()
     """The name of the platform (i.e. ``linux-64'``)."""
 
     dependencies: List[Dependency] = field()
     """The platform dependnecies"""
-
-    def get_subdir(self, dependency: Dependency) -> str:
-        if dependency.is_platform_independent:
-            return self.PYPI_NAME
-        else:
-            return self.name
 
     def __len__(self) -> int:
         return len(self.dependencies)
@@ -254,6 +260,16 @@ class EnvironmentDistBuilder(Flattenable):
 
     """
     _PIXI_LOCK_VERSION: ClassVar[int] = 6
+    """Version of the ``pixi.lock`` file currently supported in this library."""
+
+    _PYPI_NAME: ClassVar[str] = 'pypi'
+    """The sub directory name for pypi packages added to the distribution."""
+
+    _LOCAL_CHANNEL: ClassVar[str] = 'local-channel'
+    """The sub directory used for the conda channel local file directory."""
+
+    _ENV_FILE: ClassVar[str] = 'environment.yml'
+    """The ``conda env create`` environment file name."""
 
     config: EnvironmentDistConfig = field()
     """The parsed document generation configuration."""
@@ -342,6 +358,18 @@ class EnvironmentDistBuilder(Flattenable):
                 platforms={p.name: p for p in plats})
         return self._env
 
+    def _get_subdir(self, dep: Dependency, plat: Platform) -> str:
+        if dep.is_conda:
+            if dep.get_conda_package().is_noarch:
+                return 'noarch'
+            else:
+                return plat.name
+        else:
+            if dep.is_pypi_platform_independent:
+                return self._PYPI_NAME
+            else:
+                return plat.name
+
     def _fetch_or_download(self, platform: Platform, dep: Dependency):
         """Fetch a dependency if it isn't already downloaded and set
         :obj:`.Dependency.file` to the local file.
@@ -356,7 +384,8 @@ class EnvironmentDistBuilder(Flattenable):
             dep.local_file = dep.native_file
         else:
             url: str = dep.url
-            base_dir: Path = self.config.cache_dir / platform.get_subdir(dep)
+            subdir: str = self._get_subdir(dep, platform)
+            base_dir: Path = self.config.cache_dir / subdir
             if not base_dir.is_dir():
                 base_dir.mkdir(parents=True)
                 logger.info(f'created directory: {base_dir}')
@@ -388,7 +417,8 @@ class EnvironmentDistBuilder(Flattenable):
         """The contents of the a platform's Conda ``environment.yml`` file"""
         def relative_path(dep: Dependency) -> str:
             if dep.is_file:
-                return str(Path(plat.get_subdir(dep)) / dep.native_file.name)
+                subdir: str = self._get_subdir(dep, plat)
+                return str(Path(subdir) / dep.native_file.name)
             return f'{dep.name}=={dep.version}'
 
         env: Environment = self._get_environment()
@@ -404,7 +434,7 @@ class EnvironmentDistBuilder(Flattenable):
         for dep in filter(lambda d: d.is_conda, plat.dependencies):
             deps.append(relative_path(dep))
         deps.append({'pip': pdeps})
-        pdeps.extend(['--no-index', '--find-links ./pypi'])
+        pdeps.extend(['--no-index', f'--find-links ./{self._PYPI_NAME}'])
         for dep in filter(lambda d: not d.is_conda, plat.dependencies):
             pdeps.append(relative_path(dep))
         root['dependencies'] = deps
@@ -419,7 +449,7 @@ class EnvironmentDistBuilder(Flattenable):
         stage_dir.mkdir(parents=True)
         plat: Platform
         for plat in env.platforms.values():
-            env_file: Path = stage_dir / 'environment.yml'
+            env_file: Path = stage_dir / self._ENV_FILE
             param: Dict[str, Any] = dict(self.template_params)
             param['platform'] = plat
             env_content: str = self.get_environment_file(plat.name)
@@ -431,15 +461,16 @@ class EnvironmentDistBuilder(Flattenable):
             for dep in plat.dependencies:
                 targ: Path = stage_dir
                 if dep.is_conda:
-                    targ = targ / 'local-channel' / plat.name
+                    targ = targ / self._LOCAL_CHANNEL / plat.name
                 else:
-                    targ = targ / Platform.PYPI_NAME
+                    targ = targ / self._PYPI_NAME
                 targ = targ / dep.dist_name
                 targ.parent.mkdir(parents=True, exist_ok=True)
                 logger.debug(f'{dep.local_file} -> {targ}')
                 shutil.copyfile(dep.local_file, targ)
                 self._pbar.update()
-            cmd: str = f'( cd {stage_dir}/local-channel ; conda index . )'
+            channel_dir: str = f'{stage_dir}/{self._LOCAL_CHANNEL}'
+            cmd: str = f'( cd {channel_dir}  ; conda index . )'
             os.system(cmd)
         logger.info(f'wrote: {self.output_file}')
 
