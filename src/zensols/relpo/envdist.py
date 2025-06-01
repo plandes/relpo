@@ -80,12 +80,9 @@ class Dependency(Flattenable):
     source: str = field()
     """The URL of the resource."""
 
-    local_file: Path = field(default=None)
-    """The downloaded and cached file on the local file system.
+    def __post_init__(self):
+        self._local_file = None
 
-    :see: :obj:`file`
-
-    """
     def _get_url_parts(self) -> Tuple[str, str, str]:
         if not hasattr(self, '_url_parts'):
             m: re.Match = self._URL_REGEX.match(self.source)
@@ -166,6 +163,21 @@ class Dependency(Flattenable):
             return self.native_file.name
         else:
             return self.source_file
+
+    @property
+    def local_file(self) -> Path:
+        """The downloaded and cached file on the local file system.
+
+        :see: :obj:`file`
+
+        """
+        return self._local_file
+
+    @local_file.setter
+    def local_file(self, local_file: Path):
+        self._local_file = local_file
+        if hasattr(self, '_conda_package'):
+            del self._conda_package
 
     def get_conda_package(self) -> Optional[CondaPackage]:
         """Get the conda package metadata.  This must be called after the
@@ -358,17 +370,28 @@ class EnvironmentDistBuilder(Flattenable):
                 platforms={p.name: p for p in plats})
         return self._env
 
-    def _get_subdir(self, dep: Dependency, plat: Platform) -> str:
+    def _get_subdir(self, dep: Dependency, plat: Platform,
+                    conda_dir_name: str = 'conda',
+                    flatten_pypi: bool = False) -> str:
+        par_dir: str
+        sub_dir: str = None
         if dep.is_conda:
+            par_dir = conda_dir_name
             if dep.get_conda_package().is_noarch:
-                return 'noarch'
+                sub_dir = 'noarch'
             else:
-                return plat.name
+                sub_dir = plat.name
         else:
-            if dep.is_pypi_platform_independent:
-                return self._PYPI_NAME
-            else:
-                return plat.name
+            par_dir = self._PYPI_NAME
+            if not flatten_pypi:
+                if dep.is_pypi_platform_independent:
+                    sub_dir = 'noarch'
+                else:
+                    sub_dir = plat.name
+        if sub_dir is None:
+            return par_dir
+        else:
+            return str(Path(par_dir, sub_dir))
 
     def _fetch_or_download(self, platform: Platform, dep: Dependency):
         """Fetch a dependency if it isn't already downloaded and set
@@ -384,8 +407,7 @@ class EnvironmentDistBuilder(Flattenable):
             dep.local_file = dep.native_file
         else:
             url: str = dep.url
-            subdir: str = self._get_subdir(dep, platform)
-            base_dir: Path = self.config.cache_dir / subdir
+            base_dir: Path = self.config.cache_dir
             if not base_dir.is_dir():
                 base_dir.mkdir(parents=True)
                 logger.info(f'created directory: {base_dir}')
@@ -400,6 +422,12 @@ class EnvironmentDistBuilder(Flattenable):
                 else:
                     raise ProjectRepoError(f'Dependency download fail: {dep}')
             dep.local_file = local_file
+            arch_dir: Path = base_dir / self._get_subdir(dep, platform)
+            targ: Path = arch_dir / local_file.name
+            logger.debug(f'move downloaded file to arch {local_file} -> {targ}')
+            targ.parent.mkdir(parents=True, exist_ok=True)
+            local_file.rename(targ)
+            dep.local_file = targ
 
     def _download_dependencies(self):
         """Download dependencies for the enviornment's configured platforms."""
@@ -417,7 +445,7 @@ class EnvironmentDistBuilder(Flattenable):
         """The contents of the a platform's Conda ``environment.yml`` file"""
         def relative_path(dep: Dependency) -> str:
             if dep.is_file:
-                subdir: str = self._get_subdir(dep, plat)
+                subdir: str = self._get_subdir(dep, plat, flatten_pypi=True)
                 return str(Path(subdir) / dep.native_file.name)
             return f'{dep.name}=={dep.version}'
 
@@ -459,12 +487,9 @@ class EnvironmentDistBuilder(Flattenable):
             logger.info(f'wrote: {env_file}')
             self._pbar.update()
             for dep in plat.dependencies:
-                targ: Path = stage_dir
-                if dep.is_conda:
-                    targ = targ / self._LOCAL_CHANNEL / plat.name
-                else:
-                    targ = targ / self._PYPI_NAME
-                targ = targ / dep.dist_name
+                sub_dir: str = self._get_subdir(
+                    dep, plat, self._LOCAL_CHANNEL, True)
+                targ: Path = stage_dir / sub_dir / dep.dist_name
                 targ.parent.mkdir(parents=True, exist_ok=True)
                 logger.debug(f'{dep.local_file} -> {targ}')
                 shutil.copyfile(dep.local_file, targ)
