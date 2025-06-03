@@ -249,11 +249,18 @@ class Project(Flattenable):
         for pl, src in map(lambda i: (i[0].split('.'), i[1]), appends.items()):
             path: List[str] = pl[:-1]
             to_add_name: str = pl[-1]
-            to_add = toml.inline_table()
             child: Table = proj
+            added_child: bool = False
             name: str
             for name in path:
+                if name not in child:
+                    child[name] = toml.table()
+                    added_child = True
                 child = child[name]
+            if added_child:
+                to_add = toml.table()
+            else:
+                to_add = toml.inline_table()
             for k, v in src.items():
                 to_add.add(k, v)
             child.append(to_add_name, to_add)
