@@ -39,11 +39,39 @@ class EnvironmentDistConfig(Config):
     platforms: Set[str] = field()
     """The platforms to export (i.e. ``linux-64``)."""
 
-    injects: Dict[str, Any] = field()
-    """Local files to add to the distribution."""
+    injects: Dict[str, List[Dict[str, str]]] = field()
+    """Local files as glob patterns to add to the distribution."""
+
+    @staticmethod
+    def _glob_to_paths(injects: Dict[str, List[Dict[str, str]]]):
+        """Replace glob patterns with file expanded patterns."""
+        # iterate over platforms
+        plat: str
+        pats: List[Dict[str, str]]
+        for plat, pats in injects.items():
+            repls: List[Dict[str, str]] = []
+            # iterate over the platform's file patterns (each follows the Conda
+            # environment forms as a dict with one 'conda' / 'pypi' -> URL/file)
+            pat: Dict[str, str]
+            for pat in pats:
+                assert len(pat) == 1
+                dep_type: str
+                src: str
+                dep_type, src = tuple(pat.items())[0]
+                if src.find('*') == -1:
+                    # keep exactly what we had
+                    repls.append(pat)
+                else:
+                    # found a glob pattern so assume it is a file
+                    repls.extend(map(
+                        lambda p: {dep_type: str(p)}, Path('.').glob(src)))
+            pats[:] = repls
 
     @classmethod
     def instance(cls: Type, data: Dict[str, Any]) -> EnvironmentDistConfig:
+        injects: Dict[str, List[Dict[str, str]]] = cls._get(
+            data, 'injects', 'local file adds to distribution', {})
+        cls._glob_to_paths(injects)
         return EnvironmentDistConfig(
             data=data,
             cache_dir=Path(cls._get(
@@ -54,8 +82,7 @@ class EnvironmentDistConfig(Config):
                 data, 'environment', 'environment to export'),
             platforms=set(cls._get(
                 data, 'platforms', 'platforms to export', set())),
-            injects=cls._get(
-                data, 'injects', 'local file adds to distribution', {}))
+            injects=injects)
 
 
 @dataclass
@@ -111,7 +138,7 @@ class Dependency(Flattenable):
     @property
     def conda_platform(self) -> Optional[str]:
         """The platform of the conda dependency, or ``None`` if not a conda
-        progress: bool = logging.getLogger('zensols.relpo')dependnecy.
+        dependnecy.
 
         """
         if self.is_conda:
@@ -359,6 +386,8 @@ class EnvironmentDistBuilder(Flattenable):
                 dep: Dict[str, Any]
                 for dep in dep_specs:
                     assert len(dep) == 1
+                    dep_type: str
+                    src: str
                     dep_type, src = next(iter(dep.items()))
                     if dep_type != 'conda' and dep_type != 'pypi':
                         raise ProjectRepoError(
