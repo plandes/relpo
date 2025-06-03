@@ -537,6 +537,7 @@ class EnvironmentDistBuilder(Flattenable):
         self._pbar.set_description('archive')
         with tarfile.open(self.output_file, 'w') as tar:
             tar.add(stage_dir, arcname=self.output_file.stem)
+        self._pbar.update()
         logger.info(f'wrote: {self.output_file}')
 
     def generate(self):
