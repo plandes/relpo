@@ -3,9 +3,7 @@
 """
 from __future__ import annotations
 __author__ = 'Paul Landes'
-from typing import (
-    Tuple, List, Dict, Set, Any, Optional, Type, Iterable, ClassVar
-)
+from typing import Tuple, List, Dict, Set, Any, Optional, Type, ClassVar
 from dataclasses import dataclass, field
 import logging
 import os
@@ -20,7 +18,6 @@ from tqdm import tqdm
 from jinja2 import Template, BaseLoader
 from jinja2 import Environment as Jinja2Environment
 from . import ProjectRepoError, Flattenable, Config
-from .condameta import CondaPackage
 
 logger = logging.getLogger(__name__)
 
@@ -70,9 +67,11 @@ class Dependency(Flattenable):
         r'.+(?:py3-none-any\.whl|tar\.(?:gz|bz2))$')
     _URL_REGEX: ClassVar[re.Pattern] = re.compile(r'^(direct\+)?(http.+)\/(.+)')
     _NAME_VER_REGEXS: ClassVar[re.Pattern] = (
-        re.compile(r'^([A-Za-z0-9-.]+)-([^-]*)-(.*\.conda)$'),
+        re.compile(r'^([A-Za-z0-9-_.]+)-([^-]*)-(.*\.(?:conda|tar\.bz2))$'),
         re.compile(r'^([A-Za-z0-9.]+(?:[_-][a-z0-9]+)*)-(.+)((?:-py3|.tar).+)$'),
         re.compile(r'^([A-Za-z0-9.]+(?:[_-][a-z0-9]+)*)-(V?[0-9.]+(?:-?(?:stable|beta|alpha|RC[0-9]))?)(.+)$'))
+    _CONDA_ARCH_REGEX: ClassVar[re.Pattern] = re.compile(
+        r'^http.*\/conda-forge\/([^\/]+)\/(.+).+$')
 
     is_conda: bool = field()
     """Whether the dependency is ``conda``  as apposed to ``pypi``."""
@@ -110,9 +109,23 @@ class Dependency(Flattenable):
         return self._get_url_parts()[0]
 
     @property
-    def is_pypi_platform_independent(self) -> bool:
+    def conda_platform(self) -> Optional[str]:
+        """The platform of the conda dependency, or ``None`` if not a conda
+        progress: bool = logging.getLogger('zensols.relpo')dependnecy.
+
+        """
+        if self.is_conda:
+            pat: re.Pattern = self._CONDA_ARCH_REGEX
+            m: re.Match = pat.match(self.source)
+            return m.group(1)
+
+    @property
+    def is_platform_independent(self) -> bool:
         """Whether this is platform independent (i.e. ``py3-none-any``)."""
-        return self._PYPI_ANY_REGEX.match(self.source) is not None
+        if self.is_conda:
+            return self.conda_platform == 'noarch'
+        else:
+            return self._PYPI_ANY_REGEX.match(self.source) is not None
 
     @property
     def url(self) -> Optional[str]:
@@ -179,19 +192,6 @@ class Dependency(Flattenable):
         if hasattr(self, '_conda_package'):
             del self._conda_package
 
-    def get_conda_package(self) -> Optional[CondaPackage]:
-        """Get the conda package metadata.  This must be called after the
-        package is downloaded and :obj:`local_file` is set.
-
-        """
-        if self.is_conda:
-            if not hasattr(self, '_conda_package'):
-                if self.local_file is None:
-                    raise ProjectRepoError(
-                        f'Attempt conda package parse before download: {self}')
-                self._conda_package = CondaPackage(self.local_file)
-            return self._conda_package
-
     def asdict(self) -> Dict[str, Any]:
         dct: Dict[str, Any] = {
             'name': self.name,
@@ -202,7 +202,7 @@ class Dependency(Flattenable):
             'native_file': str(self.native_file)}
         dct.update(super().asdict())
         dct.pop('source')
-        dct['local_file'] = str(dct['local_file'])
+        dct['local_file'] = str(self.local_file)
         return dct
 
     def __str__(self) -> str:
@@ -375,16 +375,17 @@ class EnvironmentDistBuilder(Flattenable):
                     flatten_pypi: bool = False) -> str:
         par_dir: str
         sub_dir: str = None
+        is_ind: bool = dep.is_platform_independent
         if dep.is_conda:
             par_dir = conda_dir_name
-            if dep.get_conda_package().is_noarch:
+            if is_ind:
                 sub_dir = 'noarch'
             else:
                 sub_dir = plat.name
         else:
             par_dir = self._PYPI_NAME
             if not flatten_pypi:
-                if dep.is_pypi_platform_independent:
+                if is_ind:
                     sub_dir = 'noarch'
                 else:
                     sub_dir = plat.name
@@ -407,7 +408,8 @@ class EnvironmentDistBuilder(Flattenable):
             dep.local_file = dep.native_file
         else:
             url: str = dep.url
-            base_dir: Path = self.config.cache_dir
+            subdir: str = self._get_subdir(dep, platform)
+            base_dir: Path = self.config.cache_dir / subdir
             if not base_dir.is_dir():
                 base_dir.mkdir(parents=True)
                 logger.info(f'created directory: {base_dir}')
@@ -422,12 +424,6 @@ class EnvironmentDistBuilder(Flattenable):
                 else:
                     raise ProjectRepoError(f'Dependency download fail: {dep}')
             dep.local_file = local_file
-            arch_dir: Path = base_dir / self._get_subdir(dep, platform)
-            targ: Path = arch_dir / local_file.name
-            logger.debug(f'move downloaded file to arch {local_file} -> {targ}')
-            targ.parent.mkdir(parents=True, exist_ok=True)
-            local_file.rename(targ)
-            dep.local_file = targ
 
     def _download_dependencies(self):
         """Download dependencies for the enviornment's configured platforms."""
@@ -447,6 +443,8 @@ class EnvironmentDistBuilder(Flattenable):
             if dep.is_file:
                 subdir: str = self._get_subdir(dep, plat, flatten_pypi=True)
                 return str(Path(subdir) / dep.native_file.name)
+            if dep.name is None:
+                raise ProjectRepoError(f'Dependency has no name: {dep}')
             return f'{dep.name}=={dep.version}'
 
         env: Environment = self._get_environment()
@@ -477,7 +475,7 @@ class EnvironmentDistBuilder(Flattenable):
         stage_dir.mkdir(parents=True)
         plat: Platform
         for plat in env.platforms.values():
-            env_file: Path = stage_dir / self._ENV_FILE
+            env_file: Path = stage_dir / f'{plat.name}-{self._ENV_FILE}'
             param: Dict[str, Any] = dict(self.template_params)
             param['platform'] = plat
             env_content: str = self.get_environment_file(plat.name)
@@ -490,6 +488,8 @@ class EnvironmentDistBuilder(Flattenable):
                 sub_dir: str = self._get_subdir(
                     dep, plat, self._LOCAL_CHANNEL, True)
                 targ: Path = stage_dir / sub_dir / dep.dist_name
+                if targ.is_file():
+                    continue
                 targ.parent.mkdir(parents=True, exist_ok=True)
                 logger.debug(f'{dep.local_file} -> {targ}')
                 shutil.copyfile(dep.local_file, targ)
