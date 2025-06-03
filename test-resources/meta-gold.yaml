@@ -48,10 +48,12 @@ config:
     environment: build-pypi
     injects:
       all:
-        - pypi: target/dist/zensols_relpo-0.0.4-py3-none-any.whl
+        - pypi: target/dist/*.whl
     pixi_lock_file: pixi.lock
     platforms:
       - osx-arm64
+      - linux-64
+      - linux-aarch64
   github:
     user: exghuser
   project:

@@ -93,12 +93,14 @@
       "pixi_lock_file": "pixi.lock",
       "environment": "build-pypi",
       "platforms": [
-        "osx-arm64"
+        "osx-arm64",
+        "linux-64",
+        "linux-aarch64"
       ],
       "injects": {
         "all": [
           {
-            "pypi": "target/dist/zensols_relpo-0.0.4-py3-none-any.whl"
+            "pypi": "target/dist/*.whl"
           }
         ]
       }
