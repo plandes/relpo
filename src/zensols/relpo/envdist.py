@@ -482,10 +482,9 @@ class EnvironmentDistBuilder(Flattenable):
         plat: Platform = env.platforms[platform_name]
         deps: List[Dict[str, Any]] = []
         pdeps: List[str] = []
-        params: Dict[str, Any] = self.template_params | dict(platform=plat)
         root['name'] = self._render(
-            template_content='{{ config.project.name  }}-{{ platform.name }}',
-            params=params)
+            template_content='{{ config.project.name  }}',
+            params=self.template_params)
         root['channels'] = ['./local-channel', 'nodefaults']
         dep: Dependency
         for dep in filter(lambda d: d.is_conda, plat.dependencies):
@@ -537,7 +536,7 @@ class EnvironmentDistBuilder(Flattenable):
         logger.debug(f'staging: {stage_dir}')
         self._pbar.set_description('archive')
         with tarfile.open(self.output_file, 'w') as tar:
-            tar.add(stage_dir, arcname=self.output_file.name)
+            tar.add(stage_dir, arcname=self.output_file.stem)
         logger.info(f'wrote: {self.output_file}')
 
     def generate(self):
