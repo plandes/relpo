@@ -80,6 +80,7 @@ testprev = { features = ["pyverprev", "testprev"] }
 testcur = { features = ["pyvercur", "testcur"] }
 invoke = { features = ["invoke"], solve-group = "default" }
 build-pypi = { features = ["pyverprev", "build-pypi"], solve-group = "default" }
+build-env = { features = ["pyverprev", "build-env"], solve-group = "default" }
 
 # specify where to download the build backend that builds conda files
 [tool.pixi.package.build]
@@ -113,6 +114,8 @@ python = "==3.12.10"
 # dependencies for building the wheel
 [tool.pixi.feature.build-pypi.dependencies]
 hatchling = "==1.26.3"
+
+[tool.pixi.feature.build-env.dependencies]
 # pip for environment extract
 pip = "*"
 # needed for outdated interlap egg

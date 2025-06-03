@@ -45,7 +45,7 @@ config:
     stage_dir: doc/stage
   envdist:
     cache_dir: target/envdist-cache
-    environment: build-pypi
+    environment: build-env
     injects:
       all:
         - pypi: target/dist/*.whl

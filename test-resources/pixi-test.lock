@@ -1,6 +1,6 @@
 version: 6
 environments:
-  build-pypi:
+  build-env:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
     indexes:
