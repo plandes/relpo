@@ -75,10 +75,10 @@ class EnvironmentDistConfig(Config):
         cls._glob_to_paths(injects)
         return EnvironmentDistConfig(
             data=data,
-            cache_dir=Path(cls._get(
-                data, 'cache_dir', 'cached directory for library files')),
-            pixi_lock_file=Path(cls._get(
-                data, 'pixi_lock_file', 'the pixi lock file (pixi.lock)')),
+            cache_dir=cls._get_path(
+                data, 'cache_dir', 'cached directory for library files'),
+            pixi_lock_file=cls._get_path(
+                data, 'pixi_lock_file', 'the pixi lock file (pixi.lock)'),
             environment=cls._get(
                 data, 'environment', 'environment to export'),
             platforms=set(cls._get(
@@ -511,7 +511,7 @@ class EnvironmentDistBuilder(Flattenable):
             param['platform'] = plat
             env_content: str = self.get_environment_file(plat.name)
             env_content = self._render(env_content, param)
-            self._pbar.set_description(f'arch {plat}')
+            self._pbar.set_description(f'copy {plat}')
             env_file.write_text(env_content)
             logger.info(f'wrote: {env_file}')
             self._pbar.update()
@@ -527,12 +527,15 @@ class EnvironmentDistBuilder(Flattenable):
                 self._pbar.update()
             channel_dir: str = f'{stage_dir}/{self._LOCAL_CHANNEL}'
             cmd: str = f'( cd {channel_dir}  ; conda index . )'
+            if logger.level < logging.WARNING:
+                cmd += ' > /dev/null 2>&1'
             os.system(cmd)
         return stage_dir
 
     def _create_tar(self):
         stage_dir: Path = self._stage_dir
         logger.debug(f'staging: {stage_dir}')
+        self._pbar.set_description('archive')
         with tarfile.open(self.output_file, 'w') as tar:
             tar.add(stage_dir, arcname=self.output_file.name)
         logger.info(f'wrote: {self.output_file}')
@@ -541,7 +544,7 @@ class EnvironmentDistBuilder(Flattenable):
         """Create the environment distribution file."""
         env: Environment = self._get_environment()
         n_deps: int = len(env)
-        n_steps: int = (n_deps * 2) + 1
+        n_steps: int = (n_deps * 2) + 2
         logger.info(f'creating {repr(env)} with {n_deps} dependencies')
         self._pbar = tqdm(total=n_steps, ncols=80, disable=(not self.progress))
         self._download_dependencies()
