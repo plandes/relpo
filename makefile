@@ -132,7 +132,7 @@ testmetafilejson:
 
 # integration tests
 .PHONY:			testint
-testint:		testmetafileyaml testmetafilejson
+testint:		pywheel testmetafileyaml testmetafilejson
 
 .PHONY:			testall
 testall:		test testint

@@ -49,11 +49,10 @@ config:
     injects:
       all:
         - pypi: target/dist/*.whl
-    pixi_lock_file: pixi.lock
+    pixi_lock_file: test-resources/pixi-test.lock
     platforms:
-      - osx-arm64
       - linux-64
-      - linux-aarch64
+      - osx-64
   github:
     user: exghuser
   project:

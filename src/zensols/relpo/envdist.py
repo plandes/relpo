@@ -13,6 +13,7 @@ from pathlib import Path
 import shutil
 import requests
 from requests import Response
+import tarfile
 import yaml
 from tqdm import tqdm
 from jinja2 import Template, BaseLoader
@@ -308,7 +309,7 @@ class EnvironmentDistBuilder(Flattenable):
     """The sub directory used for the conda channel local file directory."""
 
     _ENV_FILE: ClassVar[str] = 'environment.yml'
-    """The ``conda env create`` environment file name."""
+    """The ``conda env create`` environment file suffix."""
 
     config: EnvironmentDistConfig = field()
     """The parsed document generation configuration."""
@@ -496,7 +497,7 @@ class EnvironmentDistBuilder(Flattenable):
         root['dependencies'] = deps
         return self._asyaml(root)
 
-    def _create_tar(self):
+    def _stage_tar(self):
         stage_dir: Path = self._stage_dir
         env: Environment = self._get_environment()
         if stage_dir.is_dir():
@@ -527,6 +528,13 @@ class EnvironmentDistBuilder(Flattenable):
             channel_dir: str = f'{stage_dir}/{self._LOCAL_CHANNEL}'
             cmd: str = f'( cd {channel_dir}  ; conda index . )'
             os.system(cmd)
+        return stage_dir
+
+    def _create_tar(self):
+        stage_dir: Path = self._stage_dir
+        logger.debug(f'staging: {stage_dir}')
+        with tarfile.open(self.output_file, 'w') as tar:
+            tar.add(stage_dir, arcname=self.output_file.name)
         logger.info(f'wrote: {self.output_file}')
 
     def generate(self):
@@ -537,4 +545,5 @@ class EnvironmentDistBuilder(Flattenable):
         logger.info(f'creating {repr(env)} with {n_deps} dependencies')
         self._pbar = tqdm(total=n_steps, ncols=80, disable=(not self.progress))
         self._download_dependencies()
+        self._stage_tar()
         self._create_tar()
