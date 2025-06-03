@@ -482,14 +482,10 @@ class EnvironmentDistBuilder(Flattenable):
         deps: List[Dict[str, Any]] = []
         pdeps: List[str] = []
         params: Dict[str, Any] = self.template_params | dict(platform=plat)
-        py_ver: str = self._render(
-            template_content='{{ config.project.python.version.current }}',
-            params=params)
         root['name'] = self._render(
             template_content='{{ config.project.name  }}-{{ platform.name }}',
             params=params)
         root['channels'] = ['./local-channel', 'nodefaults']
-        deps.append(f'python =={py_ver}')
         dep: Dependency
         for dep in filter(lambda d: d.is_conda, plat.dependencies):
             deps.append(relative_path(dep))
