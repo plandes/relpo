@@ -96,6 +96,7 @@ class Dependency(Flattenable):
     _URL_REGEX: ClassVar[re.Pattern] = re.compile(r'^(direct\+)?(http.+)\/(.+)')
     _NAME_VER_REGEXS: ClassVar[re.Pattern] = (
         re.compile(r'^([A-Za-z0-9-_.]+)-([^-]*)-(.*\.(?:conda|tar\.bz2))$'),
+        re.compile(r'^(.+)-(.+?)-(?:py2\.)?py3-none-any.whl$'),
         re.compile(r'^([A-Za-z0-9.]+(?:[_-][a-z0-9]+)*)-(.+)((?:-py3|.tar).+)$'),
         re.compile(r'^([A-Za-z0-9.]+(?:[_-][a-z0-9]+)*)-(V?[0-9.]+(?:-?(?:stable|beta|alpha|RC[0-9]))?)(.+)$'))
     _CONDA_ARCH_REGEX: ClassVar[re.Pattern] = re.compile(
