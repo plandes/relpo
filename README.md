@@ -18,7 +18,9 @@ Features:
 * Validate the change log and Git tag versions are in sync.
 * Incorporate custom [jinja2] templates to amend the `pyproject.toml` file
   creation (see [Templating](#templating)).
-* Render templates using the project's build information
+* Render templates using the project's build information.
+* Environment distribution feature to shore up some of the limitations of
+  [pixi-pack].
 
 
 ## Documentation
@@ -136,6 +138,52 @@ echo "author: {{ config.author.name }}" | $cmd
 ```
 
 
+## Environemnt
+
+The `envdist` action of the program to create an environment distribution tar
+ball was added because [pixi-pack] currently lacks the functionality to deal
+with PyPi source distributions.  The `envdist` feature creates a distribution
+file that is deployed to a new environment and then installed as an
+environment.  To create one, first add the following entry to the `relpo.yml`
+file:
+
+```yaml
+envdist:
+  # the directory to cache conda and PyPi library files (usually '~/.cache/relpo')
+  cache_dir: ~/.cache/relpo
+  # the Pixi lock file (usually 'pixi.lock')
+  pixi_lock_file: pixi.lock
+  # the environment to export (i.e. 'default', 'testcur')
+  environment: build-env
+  # the platforms to export, or all if not provided (i.e. 'linux-64')
+  #platforms: [linux-64, osx-64]
+  # local files to add to the distribution
+  injects:
+    all:
+      - pypi: target/dist/*.whl
+```
+
+Then compile the wheel in `target/dist`, which is done with the `pywheel`
+target when using [zenbuild].  Next create the environment tarball:
+
+```bash
+relpo envdist --config relpo.yml -o someproj.tar
+```
+
+Upload the tarball to the target machine and install it.
+
+
+```bash
+conda env create -f <arch>-environment.yml
+```
+
+By default, this will install only the local artifacts taken from the
+`pixi.lock` file and install them.  However, some versions of conda and/or
+channels might have dependency version changes.  In these cases it may be
+necessary to remove the `nodefaults` item from the `channels` item in the
+`<arch>-environment.yml` file.
+
+
 ## Changelog
 
 An extensive changelog is available [here](CHANGELOG.md).
@@ -171,3 +219,4 @@ Copyright (c) 2025 Paul Landes
 [Keep a Changelog]: http://keepachangelog.com/
 [zenbuild]: https://github.com/plandes/zenbuild
 [example relpo.yml]: test-resources/relpo.yml
+[pixi-pack]: https://github.com/Quantco/pixi-pack
