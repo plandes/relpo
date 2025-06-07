@@ -126,7 +126,7 @@ testmetafileyaml:
 testmetafilejson:
 			@make rpmetafilejson --no-print-directory 2>/dev/null | \
 				tail -n +2 | \
-				jq 'del(.date, .path, .change_log, .repo)' | \
+				jq 'del(.date, .path, .change_log, .repo, .last_release)' | \
 				diff - test-resources/meta-gold.json
 			@echo "test JSON metadata...ok"
 
