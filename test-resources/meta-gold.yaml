@@ -72,4 +72,4 @@ config:
         previous: 3.11.12
         required: '>=3.11,<3.13'
     short_description: A short description
-issue: there is no tag for the latest commit
+issue: null

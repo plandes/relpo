@@ -2,7 +2,7 @@
   "last_release": {
     "valid": false
   },
-  "issue": "there is no tag for the latest commit",
+  "issue": null,
   "config": {
     "author": {
       "name": "Paul Landes",
