@@ -11,7 +11,7 @@ version = "0.0.5"
 authors = [{name = "Paul Landes", email = "landes@mailc.net"}]
 description = "A Python project release with Git integration."
 readme = "README.md"
-requires-python = ">=3.12,<3.14"
+requires-python = ">=3.11,<3.14"
 dependencies = [
   # git
   "GitPython~=3.1.29",
