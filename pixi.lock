@@ -5099,8 +5099,8 @@ packages:
   timestamp: 1733130309598
 - pypi: ./
   name: zensols-relpo
-  version: 0.0.6
-  sha256: 4f38adedf96340dbf6e67bb40f279d5d09f7eda16c0af2171f07a9b66d2b25d8
+  version: 0.0.7
+  sha256: a8902adc0f2e506b70f1e9de94122fc5809531c18cf19cf5a685bbafc832f2c2
   requires_dist:
   - gitpython~=3.1.29
   - gitdb2~=2.0.3
