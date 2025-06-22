@@ -38,6 +38,8 @@ project:
       - tabulate
       # cli
       - plac
+  # the program is called on the command line
+  has_entry_points: true
 # configuration used to generate the 'pyproject.toml' file
 build:
   # the root Git repo directory

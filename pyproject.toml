@@ -7,7 +7,7 @@
 [project]
 name = "zensols_relpo"
 # must be kept in sync with git tags; is not updated by any automation tools
-version = "0.0.6"
+version = "0.0.7"
 authors = [{name = "Paul Landes", email = "landes@mailc.net"}]
 description = "A Python project release with Git integration."
 readme = "README.md"

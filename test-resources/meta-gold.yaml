@@ -57,6 +57,7 @@ config:
     user: exghuser
   project:
     domain: acme
+    has_entry_points: true
     keywords:
       - file
       - utility

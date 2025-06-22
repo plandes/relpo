@@ -28,7 +28,8 @@
           "tabulate",
           "plac"
         ]
-      }
+      },
+      "has_entry_points": true
     },
     "build": {
       "project_dir": ".",

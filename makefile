@@ -4,7 +4,8 @@
 ## Build
 #
 PROJ_TYPE=		python
-PROJ_MODULES =		python/doc python/deploy python/pixipack
+PROJ_MODULES =		python/doc python/test python/package python/pixipack python/deploy
+PY_TEST_ALL_TARGETS +=	testint
 
 # ignore relpo invocations used in 'pixi.mk'
 PY_RP_RELPO_BIN ?=	true
@@ -115,7 +116,8 @@ rpenvdist:		pywheel
 # project metadata yaml file test
 .PHONY:			testmetafileyaml
 testmetafileyaml:
-			@make rpmetafileyaml --no-print-directory 2>/dev/null | \
+			@echo "test YAML metadata"
+			@$(MAKE) $(PY_MAKE_ARGS) rpmetafileyaml 2>/dev/null | \
 				tail -n +2 | \
 				yq 'del(.date, .path, .change_log, .repo, .last_release)' | \
 				diff - test-resources/meta-gold.yaml
@@ -124,7 +126,8 @@ testmetafileyaml:
 # project metadata json file test
 .PHONY:			testmetafilejson
 testmetafilejson:
-			@make rpmetafilejson --no-print-directory 2>/dev/null | \
+			@echo "test JSON metadata"
+			@$(MAKE) $(PY_MAKE_ARGS) rpmetafilejson 2>/dev/null | \
 				tail -n +2 | \
 				jq 'del(.date, .path, .change_log, .repo, .last_release)' | \
 				diff - test-resources/meta-gold.json
@@ -133,6 +136,3 @@ testmetafilejson:
 # integration tests
 .PHONY:			testint
 testint:		pywheel testmetafileyaml testmetafilejson
-
-.PHONY:			testall
-testall:		test testint
