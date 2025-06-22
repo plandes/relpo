@@ -20,13 +20,15 @@ _MESSAGE_DEFAULT: str = '<comment>'
 
 @plac.annotations(
     action=('task to execute (see actions)', 'positional', None, str),
+    version=('print the version and exit', 'flag', 'v'),
     level=('level', 'option', 'l', str),
     config=('comma separated project configuration files', 'option', 'c', str),
     tmp=('temporary directory', 'option', 't', Path),
     out=('output path', 'option', 'o', str),
     format=('output format', 'option', 'f', str),
     message=('message comment used for new tags', 'option', 'm', str))
-def invoke(action: str, level: str = _LEVEL_DEFAULT,
+def invoke(action: str = None, version: bool = False,
+           level: str = _LEVEL_DEFAULT,
            config: str = 'relpo.yml',
            tmp: Path = Path('temp'),
            out: str = _OUT_DEFAULT,
@@ -49,6 +51,8 @@ actions:
 
     """
     prog: str = Path(sys.argv[0]).name
+    if version:
+        action = 'version'
     fmt: str
     log_level: int = logging.WARNING
     if level == _LEVEL_DEFAULT:
@@ -89,6 +93,8 @@ actions:
     if format is not None:
         kwargs['format'] = format
     try:
+        if action is None:
+            raise ValueError('missing action argument')
         if not hasattr(app, action):
             raise ValueError(f'no such action: {action}')
         meth = getattr(app, action)
@@ -97,7 +103,7 @@ actions:
             sys.exit(ret)
     except Exception as e:
         print(f'{prog}: error: {e}', file=sys.stderr)
-        if log_level >= logging.DEBUG:
+        if log_level <= logging.DEBUG:
             import traceback
             traceback.print_exc()
         sys.exit(1)

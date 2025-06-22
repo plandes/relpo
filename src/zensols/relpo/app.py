@@ -3,7 +3,7 @@
 """
 __author__ = 'Paul Landes'
 
-from typing import Tuple
+from typing import Tuple, ClassVar
 from dataclasses import dataclass, field
 import logging
 import sys
@@ -19,6 +19,8 @@ class Application(object):
     """The application client class to the command line.
 
     """
+    _PACKAGE: ClassVar[str] = 'zensols.relpo'
+
     config_files: Path = field()
     """The ``relpo.yml`` configuration file used for substitution."""
 
@@ -39,6 +41,16 @@ class Application(object):
             out.write_text(content)
             if logger.isEnabledFor(logging.INFO):
                 logger.info(f'wrote {data_name} to: {out}')
+
+    def version(self):
+        """Print the version."""
+        import importlib
+        version: str = '<unknown>'
+        try:
+            version = importlib.metadata.version(self._PACKAGE)
+        except importlib.metadata.PackageNotFoundError:
+            pass
+        print(version)
 
     def config(self):
         """Output the synthesized build configuration (useful for debugging)."""

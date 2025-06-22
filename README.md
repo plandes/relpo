@@ -34,7 +34,7 @@ available.
 
 The library can be installed with pip from the [pypi] repository:
 ```bash
-pip3 install zensols_relpo
+pip3 install zensols.relpo
 ```
 
 

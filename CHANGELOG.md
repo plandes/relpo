@@ -9,9 +9,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 
 ## [0.0.6] - 2025-06-22
+### Added
+- Version to the CLI.
+
 ### Changed
 - Relax Python interpreter version to include 3.11 again, which is needed for
   builds.
+- Fix log level debug trace.
 
 
 ## [0.0.5] - 2025-06-07
