@@ -4,7 +4,7 @@
 ## Build
 #
 PROJ_TYPE=		python
-PROJ_MODULES =		python/doc python/test python/package python/pixipack python/deploy
+PROJ_MODULES =		python/doc python/package python/pixipack python/deploy
 PY_TEST_ALL_TARGETS +=	testint
 
 # ignore relpo invocations used in 'pixi.mk'
