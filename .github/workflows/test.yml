@@ -26,4 +26,4 @@ jobs:
         run: 'make info'
 
       - name: Run tests
-        run: 'make testall'
+        run: 'make test wheel'
