@@ -5099,8 +5099,8 @@ packages:
   timestamp: 1733130309598
 - pypi: ./
   name: zensols-relpo
-  version: 0.0.7
-  sha256: a8902adc0f2e506b70f1e9de94122fc5809531c18cf19cf5a685bbafc832f2c2
+  version: 0.0.8
+  sha256: 0436f14b422a6320fb1ea7072eca9e4580f2a7aaaf088bf3109aa01d943de3b4
   requires_dist:
   - gitpython~=3.1.29
   - gitdb2~=2.0.3
@@ -5119,7 +5119,7 @@ packages:
   - twine~=6.1.0
   - plac~=1.4.5
   - tqdm
-  requires_python: '>=3.11,<3.14'
+  requires_python: '>=3.11,<3.15'
   editable: true
 - pypi: https://files.pythonhosted.org/packages/ad/da/f64669af4cae46f17b90798a827519ce3737d31dbafad65d391e49643dc4/zipp-3.22.0-py3-none-any.whl
   name: zipp
