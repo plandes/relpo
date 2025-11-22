@@ -144,7 +144,12 @@ The `envdist` action of the program to create an environment distribution tar
 ball was added because [pixi-pack] currently lacks the functionality to deal
 with PyPi source distributions.  The `envdist` feature creates a distribution
 file that is deployed to a new environment and then installed as an
-environment.  To create one, first add the following entry to the `relpo.yml`
+environment.
+
+
+### Configuration
+
+To create a distribution, first add the following entry to the `relpo.yml`
 file:
 
 ```yaml
@@ -163,6 +168,9 @@ envdist:
       - pypi: target/dist/*.whl
 ```
 
+
+### Usage
+
 Then compile the wheel in `target/dist`, which is done with the `pywheel`
 target when using [zenbuild].  Next create the environment tarball:
 
@@ -172,16 +180,48 @@ relpo envdist --config relpo.yml -o someproj.tar
 
 Upload the tarball to the target machine and install it.
 
+```bash
+./<arch>-install.sh
+```
+
+This will install only the local artifacts taken from the `pixi.lock` file and
+install them.  If your project has only Pypi wheels the entire environment is
+installed with conda with a command equivalent to:
 
 ```bash
 conda env create -f <arch>-environment.yml
 ```
 
-By default, this will install only the local artifacts taken from the
-`pixi.lock` file and install them.  However, some versions of conda and/or
-channels might have dependency version changes.  In these cases it may be
-necessary to remove the `nodefaults` item from the `channels` item in the
-`<arch>-environment.yml` file.
+However, the pip packages are installed as a separate command since conda
+chokes on tarball dependencies (compare to the limitations of [pixi-pack]).
+
+
+### Setuptools
+
+If you have a project that adds tarball dependencies you may need to add
+`setuptools` and/or `setuptools_scm` to the distribution.  That is done by
+adding the following to the `relpo.yml` file:
+
+```yaml
+build:
+  table_appends:
+    tool.pixi.environments.build-env-add-setup:
+      features: ['pyvercur', 'build-env-add-setup']
+      solve-group: 'default'
+    tool.pixi.feature.build-env-add-setup.dependencies:
+      setuptools: '<81'
+      setuptools_scm: '*'
+      pip: '*'
+envdist:
+  environment: build-env-add-setup
+```
+
+This configuration tells `relpo` to add any version less than 81 of
+`setuptools` and any version of `setuptools_scm`.  The latter is needed in
+cases where a tarball has a `setup.py` configuration that lacks a version, and
+instead, uses `use_scm_version=True`.  In these cases, the tar ball is
+configured to defer to the version in the repository, which of course is not
+available at the time of install in an environment with no internet connection.
 
 
 ## Changelog

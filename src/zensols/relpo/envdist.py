@@ -7,6 +7,7 @@ from typing import Tuple, List, Dict, Set, Any, Optional, Type, ClassVar
 from dataclasses import dataclass, field
 import logging
 import os
+import stat
 import re
 from collections import OrderedDict
 from pathlib import Path
@@ -97,7 +98,8 @@ class Dependency(Flattenable):
     _NAME_VER_REGEXS: ClassVar[re.Pattern] = (
         re.compile(r'^([A-Za-z0-9-_.]+)-([^-]*)-(.*\.(?:conda|tar\.bz2))$'),
         re.compile(r'^(.+)-(.+?)-(?:py2\.)?py3-none-any.whl$'),
-        re.compile(r'^([A-Za-z0-9.]+(?:[_-][a-z0-9]+)*)-(.+)((?:-py3|.tar).+)$'),
+        re.compile(r'^([A-Za-z0-9.]+(?:[_-][a-z0-9]+)*)-(.+)((?:-py3|\.tar).+)$'),
+        re.compile(r'^([A-Za-z0-9.]+(?:[_-][a-z0-9]+)*)-(.+)(?:\.zip)$'),
         re.compile(r'^([A-Za-z0-9.]+(?:[_-][a-z0-9]+)*)-(V?[0-9.]+(?:-?(?:stable|beta|alpha|RC[0-9]))?)(.+)$'))
     _CONDA_ARCH_REGEX: ClassVar[re.Pattern] = re.compile(
         r'^http.*\/conda-forge\/([^\/]+)\/(.+).+$')
@@ -135,7 +137,7 @@ class Dependency(Flattenable):
     @property
     def is_direct(self) -> bool:
         """Whether this is a Pip direct URL (i.e. ``<name> @ <url>``)."""
-        return self._get_url_parts()[0]
+        return self._get_url_parts()[0] is not None
 
     @property
     def conda_platform(self) -> Optional[str]:
@@ -171,6 +173,8 @@ class Dependency(Flattenable):
                 pat: re.Pattern
                 for pat in self._NAME_VER_REGEXS:
                     m: re.Match = pat.match(fname)
+                    if logger.isEnabledFor(logging.DEBUG):
+                        logger.debug(f'dep match: {fname} -> {m}')
                     if m is not None:
                         self._name_version = m.groups()
                         break
@@ -255,6 +259,29 @@ class Platform(Flattenable):
     dependencies: List[Dependency] = field()
     """The platform dependnecies"""
 
+    @property
+    def dependency_stats(self) -> Dict[str, int]:
+        """The number of dependencies, deps that aren't wheels (``non_wheel``)
+        and direct dependencies.
+
+        """
+        if not hasattr(self, '_dependency_stats'):
+            deps: int = 0
+            wheels: int = 0
+            directs: int = 0
+            dep: Dependency
+            for dep in filter(lambda d: not d.is_conda, self.dependencies):
+                path = Path(dep.dist_name)
+                wheels += 1 if path.suffix == '.whl' else 0
+                if dep.is_direct:
+                    directs += 1
+                deps += 1
+            self._dependency_stats = {
+                'deps': deps,
+                'non_wheels': deps - wheels,
+                'directs': directs}
+        return self._dependency_stats
+
     def __len__(self) -> int:
         return len(self.dependencies)
 
@@ -311,6 +338,12 @@ class EnvironmentDistBuilder(Flattenable):
 
     _ENV_FILE: ClassVar[str] = 'environment.yml'
     """The ``conda env create`` environment file suffix."""
+
+    _REQ_FILE: ClassVar[str] = 'requirements.txt'
+    """The pip requirements file name"""
+
+    _INSTALL_FILE: ClassVar[str] = 'install_env.sh'
+    """The install file (in this module) to copy."""
 
     config: EnvironmentDistConfig = field()
     """The parsed document generation configuration."""
@@ -377,6 +410,13 @@ class EnvironmentDistBuilder(Flattenable):
                 plat_str: str = ', '.join(plats_unavail)
                 raise ProjectRepoError(
                     f'Exported platforms requested but unavailable: {plat_str}')
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f'env: {self.config.environment}')
+                logger.debug(f'pkgs: {len(pkgs)}')
+                logger.debug(f'plat_names: {len(plat_names)}')
+                logger.debug(f'plats avail: {len(plats_avail)}')
+                logger.debug(f'plats conf: {len(plats_conf)}')
+                logger.debug(f'plats unavail: {len(plats_unavail)}')
             all_injects = self.config.injects.get('all', {})
             plat_name: str
             for plat_name in plat_names:
@@ -385,6 +425,8 @@ class EnvironmentDistBuilder(Flattenable):
                 plat_injects = self.config.injects.get(plat_name, {})
                 dep_specs.extend(all_injects)
                 dep_specs.extend(plat_injects)
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(f'deps for platform: {plat_name}')
                 dep: Dict[str, Any]
                 for dep in dep_specs:
                     assert len(dep) == 1
@@ -394,7 +436,10 @@ class EnvironmentDistBuilder(Flattenable):
                     if dep_type != 'conda' and dep_type != 'pypi':
                         raise ProjectRepoError(
                             f'Unknown dependency type: {dep_type}')
-                    deps.append(Dependency(dep_type[0] == 'c', src))
+                    dep = Dependency(dep_type[0] == 'c', src)
+                    if logger.isEnabledFor(logging.DEBUG):
+                        logger.debug(f'adding dep: {dep}')
+                    deps.append(dep)
                 plats.append(Platform(plat_name, deps))
             self._env = Environment(
                 name=self.config.environment,
@@ -445,9 +490,11 @@ class EnvironmentDistBuilder(Flattenable):
                 base_dir.mkdir(parents=True)
                 logger.info(f'created directory: {base_dir}')
             local_file: Path = base_dir / dep.source_file
-            logger.debug(f'{url} -> {local_file}')
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(f'{url} -> {local_file}')
             if not local_file.exists():
-                logger.debug(f'downloading from {url}')
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(f'downloading from {url}')
                 res: Response = requests.get(url)
                 if res.status_code == 200:
                     with open(local_file, 'wb') as f:
@@ -466,34 +513,43 @@ class EnvironmentDistBuilder(Flattenable):
             dep: Dependency
             for dep in plat.dependencies:
                 self._fetch_or_download(plat, dep)
-                self._pbar.update()
+                self._pbar.update(1)
 
-    def get_environment_file(self, platform_name: str) -> str:
-        """The contents of the a platform's Conda ``environment.yml`` file"""
-        def relative_path(dep: Dependency) -> str:
-            if dep.is_file:
-                subdir: str = self._get_subdir(dep, plat, flatten_pypi=True)
-                return str(Path(subdir) / dep.native_file.name)
-            if dep.name is None:
-                raise ProjectRepoError(f'Dependency has no name: {dep}')
-            return f'{dep.name}=={dep.version}'
+    def _get_relative_path(self, plat: Platform, dep: Dependency) -> str:
+        if dep.is_file:
+            subdir: str = self._get_subdir(dep, plat, flatten_pypi=True)
+            return str(Path(subdir) / dep.native_file.name)
+        if dep.name is None:
+            raise ProjectRepoError(f'Dependency has no name: {dep}')
+        return f'{dep.name}=={dep.version}'
 
+    def _get_req_deps(self, plat: Platform) -> List[str]:
+        pdeps: List[str] = ['--no-index', f'--find-links ./{self._PYPI_NAME}']
+        for dep in filter(lambda d: not d.is_conda, plat.dependencies):
+            pdeps.append(self._get_relative_path(plat, dep))
+        return pdeps
+
+    def _get_environment_file(self, platform_name: str, add_pip: bool) -> str:
+        """The contents of the a platform's Conda ``environment.yml`` file.
+
+        :param platform_name: name of the platform to generate content
+
+        :param add_pip: whether to add pip requirements
+
+        """
         env: Environment = self._get_environment()
         root: Dict[str, Any] = OrderedDict()
         plat: Platform = env.platforms[platform_name]
         deps: List[Dict[str, Any]] = []
-        pdeps: List[str] = []
         root['name'] = self._render(
             template_content='{{ config.project.name  }}',
             params=self.template_params)
         root['channels'] = ['./local-channel', 'nodefaults']
         dep: Dependency
         for dep in filter(lambda d: d.is_conda, plat.dependencies):
-            deps.append(relative_path(dep))
-        deps.append({'pip': pdeps})
-        pdeps.extend(['--no-index', f'--find-links ./{self._PYPI_NAME}'])
-        for dep in filter(lambda d: not d.is_conda, plat.dependencies):
-            pdeps.append(relative_path(dep))
+            deps.append(self._get_relative_path(plat, dep))
+        if add_pip:
+            deps.append({'pip': self._get_req_deps(plat)})
         root['dependencies'] = deps
         return self._asyaml(root)
 
@@ -507,24 +563,35 @@ class EnvironmentDistBuilder(Flattenable):
         plat: Platform
         for plat in env.platforms.values():
             env_file: Path = stage_dir / f'{plat.name}-{self._ENV_FILE}'
+            add_pip: bool = plat.dependency_stats['non_wheels'] == 0
             param: Dict[str, Any] = dict(self.template_params)
             param['platform'] = plat
-            env_content: str = self.get_environment_file(plat.name)
+            env_content: str = self._get_environment_file(plat.name, add_pip)
             env_content = self._render(env_content, param)
             self._pbar.set_description(f'copy {plat}')
             env_file.write_text(env_content)
             logger.info(f'wrote: {env_file}')
-            self._pbar.update()
+            if not add_pip:
+                exe_mode: int = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+                req_content: str = '\n'.join(self._get_req_deps(plat)) + '\n'
+                req_file: Path = stage_dir / f'{plat.name}-{self._REQ_FILE}'
+                src_inst_file = Path(__file__, f'../{self._INSTALL_FILE}')
+                dst_inst_file: Path = stage_dir / f'{plat.name}-install.sh'
+                req_file.write_text(req_content)
+                logger.info(f'wrote: {req_file}')
+                shutil.copy(src_inst_file.resolve(), dst_inst_file)
+                os.chmod(dst_inst_file, dst_inst_file.stat().st_mode | exe_mode)
+                logger.info(f'wrote: {dst_inst_file}')
+            self._pbar.update(1)
             for dep in plat.dependencies:
                 sub_dir: str = self._get_subdir(
                     dep, plat, self._LOCAL_CHANNEL, True)
                 targ: Path = stage_dir / sub_dir / dep.dist_name
+                self._pbar.update(1)
                 if targ.is_file():
                     continue
                 targ.parent.mkdir(parents=True, exist_ok=True)
-                logger.debug(f'{dep.local_file} -> {targ}')
                 shutil.copyfile(dep.local_file, targ)
-                self._pbar.update()
             channel_dir: str = f'{stage_dir}/{self._LOCAL_CHANNEL}'
             cmd: str = f'( cd {channel_dir}  ; conda index . )'
             if logger.level < logging.WARNING:
@@ -538,14 +605,14 @@ class EnvironmentDistBuilder(Flattenable):
         self._pbar.set_description('archive')
         with tarfile.open(self.output_file, 'w') as tar:
             tar.add(stage_dir, arcname=self.output_file.stem)
-        self._pbar.update()
+        self._pbar.update(1)
         logger.info(f'wrote: {self.output_file}')
 
     def generate(self):
         """Create the environment distribution file."""
         env: Environment = self._get_environment()
         n_deps: int = len(env)
-        n_steps: int = (n_deps * 2) + 2
+        n_steps: int = (n_deps * 2) + 2  # (dep downloads + copy) + file writes
         logger.info(f'creating {repr(env)} with {n_deps} dependencies')
         self._pbar = tqdm(total=n_steps, ncols=80, disable=(not self.progress))
         self._download_dependencies()

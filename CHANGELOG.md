@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 
+## [0.0.8] - 2025-11-21
+### Added
+- Enable `envdist` installations of projects that have tarball Pypi
+  dependencies.
+
+### Changed
+- Allow replacement of tables in the `pyproject.toml` configuration.  This
+  fixes the `key already exists` error by modifying inline tables in the
+  `pyproject.toml` file.
+
+
 ## [0.0.7] - 2025-06-22
 ### Added
 - Configuration to optionally generate the command-line entry points.
@@ -49,7 +60,8 @@ Release candidate
 
 
 <!-- links -->
-[Unreleased]: https://github.com/plandes/relpo/compare/v0.0.7...HEAD
+[Unreleased]: https://github.com/plandes/relpo/compare/v0.0.8...HEAD
+[0.0.8]: https://github.com/plandes/relpo/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/plandes/relpo/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/plandes/relpo/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/plandes/relpo/compare/v0.0.4...v0.0.5
