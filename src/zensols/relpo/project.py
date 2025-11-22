@@ -16,7 +16,7 @@ import yaml
 from jinja2 import Template, Environment, FileSystemLoader, BaseLoader
 import tomlkit as toml
 from tomlkit.toml_document import TOMLDocument
-from tomlkit.items import Table
+from tomlkit.items import Table, InlineTable
 from . import (
     ProjectRepoError, Flattenable, Config,
     Version, Commit, Tag, ChangeLogEntry, Release, ChangeLog
@@ -251,6 +251,7 @@ class Project(Flattenable):
             to_add_name: str = pl[-1]
             child: Table = proj
             added_child: bool = False
+            to_add: InlineTable
             name: str
             for name in path:
                 if name not in child:
@@ -263,6 +264,12 @@ class Project(Flattenable):
                 to_add = toml.inline_table()
             for k, v in src.items():
                 to_add.add(k, v)
+            if to_add_name in child:
+                # if the table already exists, replace it rather than merge as
+                # the client might want to delete as well (avoid complexity)
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug(f'replacing {to_add_name} with {to_add}')
+                del child[to_add_name]
             child.append(to_add_name, to_add)
         content = toml.dumps(proj)
         return content
