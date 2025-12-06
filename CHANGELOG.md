@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 
+## [0.0.9] - 2025-12-05
+### Added
+- Sphinx `sphinx-codeautolink` extension to create in-code links.
+
+
 ## [0.0.8] - 2025-11-21
 ### Added
 - Enable `envdist` installations of projects that have tarball Pypi
@@ -60,7 +65,8 @@ Release candidate
 
 
 <!-- links -->
-[Unreleased]: https://github.com/plandes/relpo/compare/v0.0.8...HEAD
+[Unreleased]: https://github.com/plandes/relpo/compare/v0.0.9...HEAD
+[0.0.9]: https://github.com/plandes/relpo/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/plandes/relpo/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/plandes/relpo/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/plandes/relpo/compare/v0.0.5...v0.0.6

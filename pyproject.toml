@@ -7,7 +7,7 @@
 [project]
 name = "zensols_relpo"
 # must be kept in sync with git tags; is not updated by any automation tools
-version = "0.0.8"
+version = "0.0.9"
 authors = [{name = "Paul Landes", email = "landes@mailc.net"}]
 description = "A Python project release with Git integration."
 readme = "README.md"
@@ -34,6 +34,7 @@ dependencies = [
   "furo",
   "sphinx-autodoc-typehints",
   "sphinx-copybutton",
+  "sphinx-codeautolink",
   "btd.sphinx.graphviz",
   "btd.sphinx.inheritance_diagram",
   # deploy
