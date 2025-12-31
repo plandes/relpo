@@ -113,6 +113,21 @@ rpenvdist:		pywheel
 
 ## Test targets
 #
+# create the project metadata YAML and JSON files
+# use for updating the pyproject.toml
+.PHONY:			updatetests
+updatetests:
+			$(call loginfo,creating yaml compare file)
+			@$(MAKE) $(PY_MAKE_ARGS) rpmetafileyaml 2>/dev/null | \
+				tail -n +2 | \
+				yq 'del(.date, .path, .change_log, .repo, .last_release)' \
+				>test-resources/meta-gold.yaml
+			$(call loginfo,creating json compare file)
+			@$(MAKE) $(PY_MAKE_ARGS) rpmetafilejson 2>/dev/null | \
+				tail -n +2 | \
+				jq 'del(.date, .path, .change_log, .repo, .last_release)' \
+				>test-resources/meta-gold.json
+
 # project metadata yaml file test
 .PHONY:			testmetafileyaml
 testmetafileyaml:

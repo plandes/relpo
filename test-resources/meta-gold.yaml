@@ -42,6 +42,7 @@ config:
       README.md: index.md
       doc: null
       tests: null
+      zenbuild/src/template/python-doc/static: zensols-static
     stage_dir: doc/stage
   envdist:
     cache_dir: target/envdist-cache
@@ -73,4 +74,4 @@ config:
         previous: 3.11.12
         required: '>=3.11,<3.13'
     short_description: A short description
-issue: null
+issue: there is no tag for latest change log

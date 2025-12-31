@@ -1,5 +1,5 @@
 {
-  "issue": null,
+  "issue": "there is no tag for latest change log",
   "config": {
     "author": {
       "name": "Paul Landes",
@@ -83,7 +83,8 @@
         "LICENSE.md": null,
         "CONTRIBUTING.md": null,
         "tests": null,
-        "doc": null
+        "doc": null,
+        "zenbuild/src/template/python-doc/static": "zensols-static"
       }
     },
     "envdist": {

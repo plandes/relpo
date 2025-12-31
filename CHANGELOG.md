@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 
+## [0.0.11] - 2025-12-31
+### Removed
+- Support for Python 3.12.
+
+
 ## [0.0.10] - 2025-12-31
 ## Changed
 - Upgrade Python to 3.13.
@@ -70,7 +75,8 @@ Release candidate
 
 
 <!-- links -->
-[Unreleased]: https://github.com/plandes/relpo/compare/v0.0.10...HEAD
+[Unreleased]: https://github.com/plandes/relpo/compare/v0.0.11...HEAD
+[0.0.11]: https://github.com/plandes/relpo/compare/v0.0.10...v0.0.11
 [0.0.10]: https://github.com/plandes/relpo/compare/v0.0.9...v0.0.10
 [0.0.9]: https://github.com/plandes/relpo/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/plandes/relpo/compare/v0.0.7...v0.0.8

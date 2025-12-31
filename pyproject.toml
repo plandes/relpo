@@ -7,11 +7,11 @@
 [project]
 name = "zensols_relpo"
 # must be kept in sync with git tags; is not updated by any automation tools
-version = "0.0.10"
+version = "0.0.11"
 authors = [{name = "Paul Landes", email = "landes@mailc.net"}]
 description = "A Python project release with Git integration."
 readme = "README.md"
-requires-python = ">=3.11,<3.15"
+requires-python = ">=3.13,<3.15"
 dependencies = [
   # git
   "GitPython~=3.1.29",
@@ -93,9 +93,9 @@ channels = [
 
 # set the Python requirement for its environment
 [tool.pixi.feature.pyverprev.dependencies]
-python = "~=3.12.10"
-[tool.pixi.feature.pyvercur.dependencies]
 python = "~=3.13.11"
+[tool.pixi.feature.pyvercur.dependencies]
+python = "~=3.14.2"
 
 # pixi directly supports depending on PyPI packages, the PyPA calls a
 # distributed package a 'distribution'
