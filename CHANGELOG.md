@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 
+## [0.0.10] - 2025-12-31
+## Changed
+- Upgrade Python to 3.13.
+
+
 ## [0.0.9] - 2025-12-05
 ### Added
 - Sphinx `sphinx-codeautolink` extension to create in-code links.
@@ -65,7 +70,8 @@ Release candidate
 
 
 <!-- links -->
-[Unreleased]: https://github.com/plandes/relpo/compare/v0.0.9...HEAD
+[Unreleased]: https://github.com/plandes/relpo/compare/v0.0.10...HEAD
+[0.0.10]: https://github.com/plandes/relpo/compare/v0.0.9...v0.0.10
 [0.0.9]: https://github.com/plandes/relpo/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/plandes/relpo/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/plandes/relpo/compare/v0.0.6...v0.0.7

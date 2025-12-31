@@ -7,7 +7,7 @@
 [project]
 name = "zensols_relpo"
 # must be kept in sync with git tags; is not updated by any automation tools
-version = "0.0.9"
+version = "0.0.10"
 authors = [{name = "Paul Landes", email = "landes@mailc.net"}]
 description = "A Python project release with Git integration."
 readme = "README.md"
@@ -95,7 +95,7 @@ channels = [
 [tool.pixi.feature.pyverprev.dependencies]
 python = "~=3.12.10"
 [tool.pixi.feature.pyvercur.dependencies]
-python = "~=3.13.3"
+python = "~=3.13.11"
 
 # pixi directly supports depending on PyPI packages, the PyPA calls a
 # distributed package a 'distribution'
@@ -110,7 +110,7 @@ zensols_relpo = { path = ".", editable = true }
 # machine
 [tool.pixi.package.host-dependencies]
 hatchling = "==1.26.3"
-python = "==3.12.10"
+python = "==3.13.11"
 
 # dependencies for building the wheel
 [tool.pixi.feature.build-pypi.dependencies]
