@@ -22,9 +22,7 @@ PY_DOMAIN_NAME :=	zensols
 PY_PROJECT_NAME :=	relpo
 PY_GITHUB_USER :=	$(shell git remote -v | grep github | head -1 | \
 				sed -E 's/.*:([^/]+).*/\1/')
-PY_VERSION :=		$(shell grep -E '^version' pyproject.toml | \
-				sed 's/.*\"\(.*\)\"$$/\1/')
-
+PY_VERSION :=		$(shell yq -oy -p=toml '.project.version' pyproject.toml)
 
 ## Project
 #
