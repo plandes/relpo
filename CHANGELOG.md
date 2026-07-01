@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 
+## [0.0.12] - 2026-07-01
+### Added
+- Added helper function `is_file` in the Jinja2 documentation generation
+  environment.
+
+
 ## [0.0.11] - 2025-12-31
 ### Removed
 - Support for Python 3.12.
@@ -75,7 +81,8 @@ Release candidate
 
 
 <!-- links -->
-[Unreleased]: https://github.com/plandes/relpo/compare/v0.0.11...HEAD
+[Unreleased]: https://github.com/plandes/relpo/compare/v0.0.12...HEAD
+[0.0.12]: https://github.com/plandes/relpo/compare/v0.0.11...v0.0.12
 [0.0.11]: https://github.com/plandes/relpo/compare/v0.0.10...v0.0.11
 [0.0.10]: https://github.com/plandes/relpo/compare/v0.0.9...v0.0.10
 [0.0.9]: https://github.com/plandes/relpo/compare/v0.0.8...v0.0.9

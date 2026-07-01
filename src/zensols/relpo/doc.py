@@ -103,6 +103,7 @@ class Documentor(object):
             for line in self.config.asyaml().strip().split('\n'):
                 logger.debug(f'  {line}')
         env = Environment(loader=FileSystemLoader(template_dir))
+        env.globals['is_file'] = lambda p: Path(p).is_file()
         tfile: Path
         for tfile in template_dir.iterdir():
             out_file: Path = self._stage_dir / tfile.name
