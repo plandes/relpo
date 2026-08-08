@@ -7,7 +7,7 @@
 [project]
 name = "zensols_relpo"
 # must be kept in sync with git tags; is not updated by any automation tools
-version = "0.0.12"
+version = "0.0.13"
 authors = [{name = "Paul Landes", email = "landes@mailc.net"}]
 description = "A Python project release with Git integration."
 readme = "README.md"
@@ -29,7 +29,6 @@ dependencies = [
   # version 8 and higher barfs with intersphix_mapping config
   # with: "Target URIs must be unique"
   "Sphinx~=7.4.7",
-  "recommonmark",
   "rst2pdf",
   "furo",
   "sphinx-autodoc-typehints",
@@ -37,6 +36,8 @@ dependencies = [
   "sphinx-codeautolink",
   "btd.sphinx.graphviz",
   "btd.sphinx.inheritance_diagram",
+  "sphinxcontrib-mermaid",
+  "myst-parser",
   # deploy
   "twine~=6.1.0",
   # cli
