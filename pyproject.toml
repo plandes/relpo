@@ -9,7 +9,7 @@ name = "zensols_relpo"
 # must be kept in sync with git tags; is not updated by any automation tools
 version = "0.0.13"
 authors = [{name = "Paul Landes", email = "landes@mailc.net"}]
-description = "A Python project release with Git integration."
+description = "Single-source Python project automation for packaging, documentation, releases, and deployable environments."
 readme = "README.md"
 requires-python = ">=3.13,<3.15"
 dependencies = [
@@ -47,7 +47,7 @@ dependencies = [
 scripts = { relpo = "zensols.relpo.cli:main" }
 license = "MIT"
 license-files = ["LICENSE.md"]
-keywords = ["build", "utility"]
+keywords = ["python", "build-automation", "project-automation", "python-packaging", "pyproject", "pyproject-toml", "pixi", "environment-management", "reproducible-environments", "release-automation", "sphinx", "documentation", "offline-installation", "deployment"]
 
 [project.urls]
 Homepage = "https://github.com/plandes/relpo"
